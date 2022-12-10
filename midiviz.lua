@@ -1,18 +1,14 @@
--- Midiviz
+-- midiviz
 --
 -- Visualisation of MIDI keys
 
 -- Our MIDI device
 
-m = midi.connect()
+midi_device = midi.connect()
 
--- Map from MIDI note to true (if it's on)
+-- Map from MIDI note to velocity (if it's on)
 
 note_nums = {}
-
-function init()
-    print("In the init function 2")
-end
 
 -- Display something on the screen.
 --
@@ -24,9 +20,9 @@ function redraw()
     -- Draw all the notes as vertical lines
     
     local drawn = false
-    for note, _ in pairs(note_nums) do
-        screen.move(note, 0)
-        screen.line(note, 63)
+    for note, vel in pairs(note_nums) do
+        screen.move(note, 63)
+        screen.line(note, 63 - vel/2)
         screen.stroke()
         drawn = true
     end
@@ -40,10 +36,10 @@ end
 
 -- Capture current MIDI data
 --
-m.event = function(data)
+midi_device.event = function(data)
     local msg = midi.to_msg(data)
     if msg.type == "note_on" then
-        note_nums[msg.note] = true
+        note_nums[msg.note] = msg.vel
     elseif msg.type == "note_off" then
         note_nums[msg.note] = nil
     end
