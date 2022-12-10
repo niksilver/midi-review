@@ -1,6 +1,8 @@
 -- midiviz
 --
--- Visualisation of MIDI keys
+-- Visualisation of MIDI keys.
+--
+-- e1 = scroll through time
 
 -- Our MIDI device
 
@@ -24,7 +26,8 @@ function redraw()
     screen.level(15)
     screen.line_width(1)
 
-    -- Draw all the notes as vertical lines
+    -- Draw all the notes as vertical lines.
+    -- Draw the notes from our current idx.
     
     local drawn = false
     if idx > 0 then
@@ -53,7 +56,7 @@ midi_device.event = function(data)
     if msg.type == "note_on" then
         -- If it's note on, add to the current 'on' notes
         note_vel[msg.note] = msg.vel
-        idx = idx + 1
+        idx = #idx_ndata + 1
         idx_ndata[idx] = {
             time = millis,
             note_vel = shallow_copy(note_vel)
@@ -62,7 +65,7 @@ midi_device.event = function(data)
     elseif msg.type == "note_off" then
         -- If it's note off, remove from the current 'on' notes
         note_vel[msg.note] = nil
-        idx = idx + 1
+        idx = #idx_ndata + 1
         idx_ndata[idx] = {
             time = millis,
             note_vel = shallow_copy(note_vel)
