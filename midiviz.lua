@@ -23,17 +23,49 @@ idx = 0
 --
 function redraw()
     screen.clear()
-    screen.level(15)
     screen.line_width(1)
+
+    -- Draw the timeline at the top, plus the note notches and
+    -- where we are now.
+
+    screen.level(2)
+    screen.move(0, 2)
+    screen.line(127, 2)
+    screen.stroke()
+    if idx > 0 then
+        -- Get the time difference from first to last note
+        local time_first = idx_ndata[1].time
+        local time_last = idx_ndata[#idx_ndata].time
+        local time_diff = time_last - time_first
+
+        -- Draw the notches on the timeline
+        for i, ndata in pairs(idx_ndata) do
+            local x = (ndata.time - time_first) / time_diff * 127 + 1
+            if time_diff == 0 then x = 1 end
+            screen.move(x, 0)
+            screen.line_rel(0, 3)
+            screen.stroke()
+        end
+
+        -- Draw the current notch. We must do this last to ensure it
+        -- shows up over the other notches
+        local x = (idx_ndata[idx].time - time_first) / time_diff * 127 + 1
+        if time_diff == 0 then x = 1 end
+        screen.level(15)
+        screen.move(x, 0)
+        screen.line_rel(0, 3)
+        screen.stroke()
+    end
 
     -- Draw all the notes as vertical lines.
     -- Draw the notes from our current idx.
     
+    screen.level(15)
     local drawn = false
     if idx > 0 then
         for note, vel in pairs(idx_ndata[idx].note_vel) do
             screen.move(note, 63)
-            screen.line(note, 63 - vel/2)
+            screen.line(note, 63 - vel * 0.4)
             screen.stroke()
             drawn = true
         end
@@ -72,6 +104,28 @@ midi_device.event = function(data)
         }
     end
     redraw()
+end
+
+-- Draw a notch on the timeline
+-- i - which notch idx
+-- level - screen brightness
+--
+function draw_notch(i, level)
+    -- Get the time difference from first to last note
+    local time_first = idx_ndata[1].time
+    local time_last = idx_ndata[#idx_ndata].time
+    local time_diff = time_last - time_first
+
+    -- Calculate the x position of the notch
+    local ndata = idx_ndata[i]
+    local x = (ndata.time - time_first) / time_diff * 127 + 1
+    if time_diff == 0 then x = 1 end
+
+    -- Draw
+    screen.level(level)
+    screen.move(x, 0)
+    screen.line_rel(0, 3)
+    screen.stroke()
 end
 
 -- Encoders:
