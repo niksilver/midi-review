@@ -134,9 +134,9 @@ function display_note_names(notes)
 
     table.sort(notes)
     for i, n in ipairs(notes) do
-        local nam = musicutil.note_num_to_name(n)
-        name[i] = nam
-        name_size[i] = #name * 5
+        local nnam = musicutil.note_num_to_name(n)
+        name[i] = nnam
+        name_size[i] = #nnam * 5
         if i < #notes then
             gap_size[i+1] = notes[i+1] - n
         end
