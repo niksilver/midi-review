@@ -100,8 +100,8 @@ function redraw()
         local notes = {}
 
         for note, vel in pairs(data) do
-            screen.move(note, 63)
-            screen.line(note, 63 - vel * 0.4)
+            screen.move(note, 56)
+            screen.line_rel(0, -vel * 0.4)
             screen.stroke()
 
             table.insert(notes, note)
@@ -122,10 +122,49 @@ end
 -- @param notes    List of MIDI notes (each is 0-127).
 --
 function display_note_names(notes)
+    -- We need to know the width of each note name and the width
+    -- of the gaps between them. The gaps will get resized in
+    -- proportion to each other.
+
+    local name = {}        -- name[n] is the name of note number n
+    local name_size = {}   -- note_size[n] is the width of note number n
+    local gap_size = {}    -- gap_size[n] is the gap just before note number n
+
+    gap_size[1] = 1
+
     table.sort(notes)
     for i, n in ipairs(notes) do
-        screen.move(i*5, 63)
-        screen.text( musicutil.note_num_to_name(n) )
+        local nam = musicutil.note_num_to_name(n)
+        name[i] = nam
+        name_size[i] = #name * 5
+        if i < #notes then
+            gap_size[i+1] = notes[i+1] - n
+        end
+    end
+
+    table.insert(gap_size, 1)
+
+    -- We need to get to:
+    -- (all the name sizes) + factor * (all the gap sizes) = 128
+
+    local name_size_sum = 0
+    for i, s in pairs(name_size) do
+        name_size_sum = name_size_sum + s
+    end
+
+    local gap_size_sum = 0
+    for i, s in pairs(gap_size) do
+        gap_size_sum = gap_size_sum + s
+    end
+
+    local factor = (128 - name_size_sum) / gap_size_sum
+
+    local x = 0
+    for i, n in ipairs(notes) do
+        x = x + gap_size[i] * factor
+        screen.move(x, 63)
+        screen.text( name[i] )
+        x = x + name_size[i]
     end
 end
 
