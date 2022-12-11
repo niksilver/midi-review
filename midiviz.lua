@@ -6,18 +6,25 @@
 -- k2 long press (1 sec) = record
 -- e2 = scroll through time
 
--- Current status, including when k2 was pressed down (for long press).
+-- Current status, including
+-- when k2 was pressed down (for long press);
+-- what the last MIDI event was.
 
 STOP = 0
 PLAY = 1
 RECORD = 2
 
-LONG_PRESS_SECS = 1.0  -- Length of a long press, in seconds
+NO_EVENT = 10
+NOTE_EVENT = 11
+TRANSPORT_EVENT = 12
 
 status = {
     mode = STOP,
-    k2_down = nil
+    k2_down = nil,
+    last_event = NO_EVENT,
 }
+
+LONG_PRESS_SECS = 1.0  -- Length of a long press, in seconds
 
 -- Our MIDI device
 
@@ -75,15 +82,19 @@ function redraw()
     -- From our current idx, draw all the notes as vertical lines.
     
     screen.level(15)
-    if idx > 0 then
-        for note, vel in pairs(idx_ndata[idx].note_vel) do
+    if status.last_event ~= NO_EVENT then
+        -- We've just had some event, so work out what data we need to display
+
+        local data =
+            status.last_event == NOTE_EVENT and note_vel or idx_ndata[idx].note_vel
+        for note, vel in pairs(data) do
             screen.move(note, 63)
             screen.line(note, 63 - vel * 0.4)
             screen.stroke()
         end
-    end
+    else
+        -- We haven't had any events yet
 
-    if idx == 0 then
         screen.move(48, 40)
         screen.text("Waiting")
     end
@@ -99,12 +110,18 @@ midi_device.event = function(data)
     if msg.type == "note_on" then
         -- If it's note on, add to the current 'on' notes
         note_vel[msg.note] = msg.vel
-        append_ndata(note_vel)
+        if status.mode == RECORD then
+            append_ndata(note_vel)
+        end
+        status.last_event = NOTE_EVENT
 
     elseif msg.type == "note_off" then
         -- If it's note off, remove from the current 'on' notes
         note_vel[msg.note] = nil
-        append_ndata(note_vel)
+        if status.mode == RECORD then
+            append_ndata(note_vel)
+        end
+        status.last_event = NOTE_EVENT
     end
     redraw()
 end
@@ -174,6 +191,7 @@ end
 function enc(n, d)
     if n == 2 and #idx_ndata > 0 then
         idx = clamp(idx + d, 1, #idx_ndata)
+        status.last_event = TRANSPORT_EVENT
         redraw()
     end
 end
