@@ -6,6 +6,17 @@
 -- k2 long press = record
 -- e2 = scroll through time
 
+-- Current status, including when e2 was pressed down (for long press).
+
+STOP = 0
+PLAY = 1
+RECORD = 2
+
+status = {
+    mode = STOP,
+    e2_down = nil
+}
+
 -- Our MIDI device
 
 midi_device = midi.connect()
@@ -21,6 +32,8 @@ note_vel = {}
 idx_ndata = {}
 idx = 0
 
+TIMELINE_WIDTH = 118
+
 -- (Re)draw the screen
 --
 function redraw()
@@ -32,7 +45,7 @@ function redraw()
 
     screen.level(2)
     screen.move(0, 2)
-    screen.line(127, 2)
+    screen.line(TIMELINE_WIDTH, 2)
     screen.stroke()
     if idx > 0 then
         -- Draw the notches on the timeline
@@ -44,6 +57,12 @@ function redraw()
         -- shows up over the other notches
         draw_notch(idx, 15)
     end
+
+    -- Show the current mode
+
+    screen.level(15)
+    screen.move(122, 5)
+    screen.text("X")
 
     -- From our current idx, draw all the notes as vertical lines.
     
@@ -103,7 +122,7 @@ function draw_notch(i, level)
 
     -- Calculate the x position of the notch
     local ndata = idx_ndata[i]
-    local x = (ndata.time - time_first) / time_diff * 127 + 1
+    local x = (ndata.time - time_first) / time_diff * TIMELINE_WIDTH + 1
     if time_diff == 0 then x = 1 end
 
     -- Draw
