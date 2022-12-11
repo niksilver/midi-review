@@ -26,6 +26,10 @@ status = {
 
 LONG_PRESS_SECS = 1.0  -- Length of a long press, in seconds
 
+-- The metronome for playing back notes; nil means stopped.
+
+player = nil
+
 -- Our MIDI device
 
 midi_device = midi.connect()
@@ -129,7 +133,7 @@ end
 -- Add note data to the end of our current history.
 --
 function append_ndata()
-    local millis = os.clock()
+    local millis = util.time()
 
     idx = #idx_ndata + 1
     idx_ndata[idx] = {
@@ -175,13 +179,55 @@ function key(n, z)
                 status.mode = RECORD
             elseif status.mode == STOP then
                 status.mode = PLAY
+                play_next(idx)
             else
                 status.mode = STOP
+                stop_play()
             end
 
             status.k2_down = nil
             redraw()
         end
+    end
+end
+
+-- Play the next MIDI note (and continue)
+-- @param i    The idx to play from
+--
+function play_next(i)
+    -- We might play the note at this point, but actually we're already
+    -- displaying it and we're not outputting sound.
+
+    -- Stop if at the end, or queue up the next note
+
+    if i == #idx_ndata then
+        stop_play()
+    else
+        if player then
+            metro.free(player.id)
+        end
+
+        local duration = idx_ndata[i+1].time - idx_ndata[i].time
+        player = metro.init(
+            function()
+                idx = i + 1
+                redraw()
+                play_next(idx)
+            end, duration, 1
+        )
+        player:start()
+    end
+end
+
+-- Stop playing the MIDI notes.
+--
+function stop_play()
+    if player then
+        player:stop()
+        metro.free(player.id)
+        player = nil
+        status.mode = STOP
+        redraw()
     end
 end
 
