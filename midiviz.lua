@@ -1,8 +1,10 @@
 -- midiviz
 --
--- Visualisation of MIDI keys.
+-- Visualisation of MIDI key presses.
 --
--- e1 = scroll through time
+-- k2 = play/stop
+-- k2 long press = record
+-- e2 = scroll through time
 
 -- Our MIDI device
 
@@ -90,8 +92,8 @@ midi_device.event = function(data)
 end
 
 -- Draw a notch on the timeline
--- i - which notch idx
--- level - screen brightness
+-- @param i    Which notch idx
+-- @param level    Screen brightness
 --
 function draw_notch(i, level)
     -- Get the time difference from first to last note
@@ -112,10 +114,10 @@ function draw_notch(i, level)
 end
 
 -- Encoders:
--- k1 - scroll back and forth through our notes
+-- e2 = scroll back and forth through our notes
 --
 function enc(n, d)
-    if n == 1 and #idx_ndata > 0 then
+    if n == 2 and #idx_ndata > 0 then
         idx = clamp(idx + d, 1, #idx_ndata)
         redraw()
     end
