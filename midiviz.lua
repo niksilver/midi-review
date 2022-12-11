@@ -236,7 +236,7 @@ end
 --
 function enc(n, d)
     if n == 2 and #idx_ndata > 0 then
-        idx = clamp(idx + d, 1, #idx_ndata)
+        idx = util.clamp(idx + d, 1, #idx_ndata)
         status.last_event = TRANSPORT_EVENT
         redraw()
     end
@@ -250,13 +250,4 @@ function shallow_copy(tab)
         copy[k] = v
     end
     return copy
-end
-
-function clamp(n, lo, hi)
-    if n < lo then
-        return lo
-    elseif hi < n then
-        return hi
-    end
-    return n
 end
