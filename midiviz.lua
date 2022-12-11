@@ -65,6 +65,7 @@ function redraw()
     screen.move(0, 2)
     screen.line(TIMELINE_WIDTH, 2)
     screen.stroke()
+
     if idx > 0 then
         -- Draw the notches on the timeline
         for i, _ in pairs(idx_ndata) do
@@ -101,7 +102,7 @@ function redraw()
 
         for note, vel in pairs(data) do
             screen.move(note, 56)
-            screen.line_rel(0, -vel * 0.4)
+            screen.line_rel(0, math.min(-vel * 0.4, -1))
             screen.stroke()
 
             table.insert(notes, note)
