@@ -3,18 +3,20 @@
 -- Visualisation of MIDI key presses.
 --
 -- k2 = play/stop
--- k2 long press = record
+-- k2 long press (1 sec) = record
 -- e2 = scroll through time
 
--- Current status, including when e2 was pressed down (for long press).
+-- Current status, including when k2 was pressed down (for long press).
 
 STOP = 0
 PLAY = 1
 RECORD = 2
 
+LONG_PRESS_SECS = 1.0  -- Length of a long press, in seconds
+
 status = {
     mode = STOP,
-    e2_down = nil
+    k2_down = nil
 }
 
 -- Our MIDI device
@@ -62,7 +64,13 @@ function redraw()
 
     screen.level(15)
     screen.move(122, 5)
-    screen.text("X")
+    if status.mode == PLAY then
+        screen.text(">")
+    elseif status.mode == RECORD then
+        screen.text("R")
+    else
+        screen.text("-")
+    end
 
     -- From our current idx, draw all the notes as vertical lines.
     
@@ -130,6 +138,31 @@ function draw_notch(i, level)
     screen.move(x, 0)
     screen.line_rel(0, 3)
     screen.stroke()
+end
+
+-- Handle key presses
+--
+function key(n, z)
+    local time = util.time()
+    if n == 2 then
+        if z == 1 then
+            -- k2 has gone down; note when
+            status.k2_down = time
+        else
+            -- k2 has gone up...
+
+            if status.k2_down and (time - status.k2_down) >= LONG_PRESS_SECS then
+                status.mode = RECORD
+            elseif status.mode == STOP then
+                status.mode = PLAY
+            else
+                status.mode = STOP
+            end
+
+            status.k2_down = nil
+            redraw()
+        end
+    end
 end
 
 -- Encoders:
