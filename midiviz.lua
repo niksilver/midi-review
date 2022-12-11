@@ -181,6 +181,7 @@ function key(n, z)
             if status.k2_down and (time - status.k2_down) >= LONG_PRESS_SECS then
                 reset_player()
                 init_note_data()
+                status.last_event = NO_EVENT
                 status.mode = RECORD
             elseif status.mode == STOP then
                 status.mode = PLAY
