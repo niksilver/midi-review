@@ -6,6 +6,8 @@
 -- k2 long press (1 sec) = record
 -- e2 = scroll through time
 
+musicutil = require('musicutil')
+
 -- Current status, including
 -- when k2 was pressed down (for long press);
 -- what the last MIDI event was.
@@ -87,6 +89,7 @@ function redraw()
     end
 
     -- From our current idx, draw all the notes as vertical lines.
+    -- We'll also save the notes to display the names.
     
     screen.level(15)
     if status.last_event ~= NO_EVENT then
@@ -94,11 +97,17 @@ function redraw()
 
         local data =
             status.last_event == NOTE_EVENT and note_vel or idx_ndata[idx].note_vel
+        local notes = {}
+
         for note, vel in pairs(data) do
             screen.move(note, 63)
             screen.line(note, 63 - vel * 0.4)
             screen.stroke()
+
+            table.insert(notes, note)
         end
+
+        display_note_names(notes)
     else
         -- We haven't had any events yet
 
@@ -107,6 +116,17 @@ function redraw()
     end
 
     screen.update()
+end
+
+-- Display the notes at the bottom of the screen.
+-- @param notes    List of MIDI notes (each is 0-127).
+--
+function display_note_names(notes)
+    table.sort(notes)
+    for i, n in ipairs(notes) do
+        screen.move(i*5, 63)
+        screen.text( musicutil.note_num_to_name(n) )
+    end
 end
 
 -- Capture current MIDI data
