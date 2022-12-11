@@ -19,7 +19,7 @@ note_vel = {}
 idx_ndata = {}
 idx = 0
 
--- Display something on the screen.
+-- (Re)draw the screen
 --
 function redraw()
     screen.clear()
@@ -33,46 +33,29 @@ function redraw()
     screen.line(127, 2)
     screen.stroke()
     if idx > 0 then
-        -- Get the time difference from first to last note
-        local time_first = idx_ndata[1].time
-        local time_last = idx_ndata[#idx_ndata].time
-        local time_diff = time_last - time_first
-
         -- Draw the notches on the timeline
-        for i, ndata in pairs(idx_ndata) do
-            local x = (ndata.time - time_first) / time_diff * 127 + 1
-            if time_diff == 0 then x = 1 end
-            screen.move(x, 0)
-            screen.line_rel(0, 3)
-            screen.stroke()
+        for i, _ in pairs(idx_ndata) do
+            draw_notch(i, 2)
         end
 
         -- Draw the current notch. We must do this last to ensure it
         -- shows up over the other notches
-        local x = (idx_ndata[idx].time - time_first) / time_diff * 127 + 1
-        if time_diff == 0 then x = 1 end
-        screen.level(15)
-        screen.move(x, 0)
-        screen.line_rel(0, 3)
-        screen.stroke()
+        draw_notch(idx, 15)
     end
 
-    -- Draw all the notes as vertical lines.
-    -- Draw the notes from our current idx.
+    -- From our current idx, draw all the notes as vertical lines.
     
     screen.level(15)
-    local drawn = false
     if idx > 0 then
         for note, vel in pairs(idx_ndata[idx].note_vel) do
             screen.move(note, 63)
             screen.line(note, 63 - vel * 0.4)
             screen.stroke()
-            drawn = true
         end
     end
 
-    if not drawn then
-        screen.move(40, 40)
+    if idx == 0 then
+        screen.move(48, 40)
         screen.text("Waiting")
     end
 
