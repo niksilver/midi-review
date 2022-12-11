@@ -95,27 +95,30 @@ end
 --
 midi_device.event = function(data)
     local msg = midi.to_msg(data)
-    local millis = os.clock()
 
     if msg.type == "note_on" then
         -- If it's note on, add to the current 'on' notes
         note_vel[msg.note] = msg.vel
-        idx = #idx_ndata + 1
-        idx_ndata[idx] = {
-            time = millis,
-            note_vel = shallow_copy(note_vel)
-        }
+        append_ndata(note_vel)
 
     elseif msg.type == "note_off" then
         -- If it's note off, remove from the current 'on' notes
         note_vel[msg.note] = nil
-        idx = #idx_ndata + 1
-        idx_ndata[idx] = {
-            time = millis,
-            note_vel = shallow_copy(note_vel)
-        }
+        append_ndata(note_vel)
     end
     redraw()
+end
+
+-- Add note data to the end of our current history.
+--
+function append_ndata()
+    local millis = os.clock()
+
+    idx = #idx_ndata + 1
+    idx_ndata[idx] = {
+        time = millis,
+        note_vel = shallow_copy(note_vel)
+    }
 end
 
 -- Draw a notch on the timeline
