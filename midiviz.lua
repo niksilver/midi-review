@@ -179,7 +179,7 @@ function key(n, z)
                 status.mode = RECORD
             elseif status.mode == STOP then
                 status.mode = PLAY
-                play_next(idx)
+                play_next()
             else
                 status.mode = STOP
                 stop_play()
@@ -192,27 +192,24 @@ function key(n, z)
 end
 
 -- Play the next MIDI note (and continue)
--- @param i    The idx to play from
 --
-function play_next(i)
-    -- We might play the note at this point, but actually we're already
-    -- displaying it and we're not outputting sound.
+function play_next()
+    -- We should be displaying the current MIDI note, so we need to
+    -- stop if at the end, or queue up the next note.
 
-    -- Stop if at the end, or queue up the next note
-
-    if i == #idx_ndata then
+    if idx == #idx_ndata then
         stop_play()
     else
         if player then
             metro.free(player.id)
         end
 
-        local duration = idx_ndata[i+1].time - idx_ndata[i].time
+        local duration = idx_ndata[idx+1].time - idx_ndata[idx].time
         player = metro.init(
             function()
-                idx = i + 1
+                idx = idx + 1
                 redraw()
-                play_next(idx)
+                play_next()
             end, duration, 1
         )
         player:start()
