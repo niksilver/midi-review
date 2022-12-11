@@ -41,9 +41,12 @@ midi_device = midi.connect()
 --     - note_vel - a note-velocity table as above.
 -- idx - Current index where there's note data, or 0.
 
-note_vel = {}
-idx_ndata = {}
-idx = 0
+function init_note_data()
+    note_vel = {}
+    idx_ndata = {}
+    idx = 0
+end
+init_note_data()
 
 TIMELINE_WIDTH = 118
 
@@ -176,13 +179,15 @@ function key(n, z)
             -- k2 has gone up...
 
             if status.k2_down and (time - status.k2_down) >= LONG_PRESS_SECS then
+                reset_player()
+                init_note_data()
                 status.mode = RECORD
             elseif status.mode == STOP then
                 status.mode = PLAY
                 play_next()
             else
+                reset_player()
                 status.mode = STOP
-                stop_play()
             end
 
             status.k2_down = nil
@@ -197,13 +202,12 @@ function play_next()
     -- We should be displaying the current MIDI note, so we need to
     -- stop if at the end, or queue up the next note.
 
-    if idx == #idx_ndata then
-        stop_play()
-    else
-        if player then
-            metro.free(player.id)
-        end
+    reset_player()
 
+    if idx == #idx_ndata then
+        status.mode = STOP
+        redraw()
+    else
         local duration = idx_ndata[idx+1].time - idx_ndata[idx].time
         player = metro.init(
             function()
@@ -216,15 +220,13 @@ function play_next()
     end
 end
 
--- Stop playing the MIDI notes.
+-- Reset/cancel the note player
 --
-function stop_play()
+function reset_player()
     if player then
         player:stop()
         metro.free(player.id)
         player = nil
-        status.mode = STOP
-        redraw()
     end
 end
 
