@@ -28,9 +28,9 @@ status = {
 
 LONG_PRESS_SECS = 1.0  -- Length of a long press, in seconds
 
--- The metronome for playing back notes; nil means stopped.
+-- The metronome for playing back note data; nil means stopped.
 
-player = nil
+ndata_player = nil
 
 -- Our MIDI device
 
@@ -51,6 +51,36 @@ end
 init_note_data()
 
 TIMELINE_WIDTH = 118
+
+-- The recording voice (head) and buffer for softcut
+
+SC_VOICE = 1
+SC_BUFFER = 1
+
+-- Initialise softcut for recording and playback
+--
+function init()
+    audio.level_adc_cut(1.0)    -- Softcut ADC level
+
+    -- Setup and play parameters for softcut
+
+    softcut.buffer_clear(SC_VOICE)
+    softcut.enable(SC_VOICE, 1)    -- Enable (1) the voice
+    softcut.buffer(SC_VOICE, SC_BUFFER)    -- Link the voice to the buffer
+    softcut.level(SC_VOICE, 1.0)    -- Output level for the voice
+    softcut.rate(SC_VOICE, 1.0)    -- Playback rate for the voice
+    softcut.loop(SC_VOICE, 0)    -- No looping on the voice (0 = off)
+    softcut.position(SC_VOICE, 1)    -- Play position at the start
+    softcut.play(SC_VOICE, 0)    -- Don't play the voice yet (0 = off)
+
+    -- Record paramaters
+
+    softcut.level_input_cut(1, SC_VOICE, 1.0)    -- Input level of channel 1
+    softcut.level_input_cut(2, SC_VOICE, 1.0)    -- Input level of channel 2
+    softcut.rec_level(SC_VOICE, 1.0)    -- Record level for the voice
+    softcut.pre_level(SC_VOICE, 0.0)    -- Pre-amp level for the voice
+    softcut.rec(SC_VOICE, 0)    -- Don't record to the voice yet (0 = off)
+end
 
 -- (Re)draw the screen
 --
@@ -203,6 +233,11 @@ midi_device.event = function(data)
         end
         status.last_event = NOTE_EVENT
 
+        -- Maybe this is the trigger to start recording audio
+        if #idx_ndata == 1 then
+            start_recording_audio()
+        end
+
     elseif msg.type == "note_off" then
         -- If it's note off, remove from the current 'on' notes
         note_vel[msg.note] = nil
@@ -260,20 +295,37 @@ function key(n, z)
             -- k2 has gone up...
 
             if status.k2_down and (time - status.k2_down) >= LONG_PRESS_SECS then
-                reset_player()
+                -- Go into record mode.
+                -- We don't start writing audio and MIDI data here;
+                -- we start when we get the first MIDI note.
+
+                reset_ndata_player()
                 init_note_data()
+                stop_recording_audio()
+                stop_playing_audio()
+
                 status.last_event = NO_EVENT
                 status.mode = RECORD
+
             elseif status.mode == STOP then
+                -- Short press - go into play mode
+
+                stop_recording_audio()
+
                 status.mode = PLAY
-                play_next()
+                play_next_ndata()
+                start_playing_audio()
             else
+                -- Short press - go into stop mode
+
                 -- If we were recording, record final empty note data
+                -- and stop audio recording
                 if status.mode == RECORD then
                     append_ndata({})
+                    stop_recording_audio()
                 end
 
-                reset_player()
+                reset_ndata_player()
                 status.mode = STOP
             end
 
@@ -283,37 +335,40 @@ function key(n, z)
     end
 end
 
--- Play the next MIDI note (and continue)
+-- Play the next MIDI note data (and continue)
 --
-function play_next()
+function play_next_ndata()
     -- We should be displaying the current MIDI note, so we need to
     -- stop if at the end, or queue up the next note.
 
-    reset_player()
+    reset_ndata_player()
 
     if idx == #idx_ndata then
+        -- End of the note data
+
+        stop_playing_audio()
         status.mode = STOP
         redraw()
     else
         local duration = idx_ndata[idx+1].time - idx_ndata[idx].time
-        player = metro.init(
+        ndata_player = metro.init(
             function()
                 idx = idx + 1
                 redraw()
-                play_next()
+                play_next_ndata()
             end, duration, 1
         )
-        player:start()
+        ndata_player:start()
     end
 end
 
--- Reset/cancel the note player
+-- Reset/cancel the note data player
 --
-function reset_player()
-    if player then
-        player:stop()
-        metro.free(player.id)
-        player = nil
+function reset_ndata_player()
+    if ndata_player then
+        ndata_player:stop()
+        metro.free(ndata_player.id)
+        ndata_player = nil
     end
 end
 
@@ -337,3 +392,35 @@ function shallow_copy(tab)
     end
     return copy
 end
+
+-- Start recording audio
+--
+function start_recording_audio()
+    print ("start_recording_audio()")
+    softcut.buffer_clear(SC_VOICE)    -- Clear the buffer for the voice
+    softcut.position(SC_VOICE, 1)    -- Play position at the start
+    softcut.rec(SC_VOICE, 1)    -- Start recording (1 = on)
+end
+
+-- Stop recording audio
+--
+function stop_recording_audio()
+    print ("stop_recording_audio()")
+    softcut.rec(SC_VOICE, 0)    -- Stop recording (0 = off)
+end
+
+-- Stop playing audio
+--
+function stop_playing_audio()
+    print ("stop_playing_audio()")
+    softcut.play(SC_VOICE, 0)    -- Stop playing (0 = off)
+end
+
+-- Start playing audio
+--
+function start_playing_audio()
+    print ("start_playing_audio()")
+    softcut.position(SC_VOICE, 1)    -- Play position at the start
+    softcut.play(SC_VOICE, 1)    -- Start playing (1 = on)
+end
+
