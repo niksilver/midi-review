@@ -268,6 +268,11 @@ function key(n, z)
                 status.mode = PLAY
                 play_next()
             else
+                -- If we were recording, record final empty note data
+                if status.mode == RECORD then
+                    append_ndata({})
+                end
+
                 reset_player()
                 status.mode = STOP
             end
