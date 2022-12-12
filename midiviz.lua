@@ -123,6 +123,10 @@ end
 -- @param notes    List of MIDI notes (each is 0-127).
 --
 function display_note_names(notes)
+    if #notes == 0 then
+        return
+    end
+
     -- We need to know the width of each note name and the width
     -- of the gaps between them. The gaps will get resized in
     -- proportion to each other.
@@ -142,8 +146,13 @@ function display_note_names(notes)
     end
 
     -- We need to get to:
-    -- 2 * (end gap) + (all the name sizes) + factor * (all the gap sizes) = 128
-    -- and we'll decide that the factor is 1.
+    --
+    -- (total end gap) + (all the name sizes) + factor * (all the gap sizes) = 128
+    --
+    -- where factor is the space between two notes that are next to each other
+    -- (note distance 1).  We'll decide that the factor is 1.
+    -- The total end gap will be split proportionally to how far from
+    -- the end the lowest and highest notes are.
 
     local name_size_sum = 0
     for i, s in pairs(name_size) do
@@ -156,9 +165,22 @@ function display_note_names(notes)
     end
 
     local factor = 1
-    local end_gap = (128 - name_size_sum - factor * gap_size_sum) / 2
+    local total_end_gap = 128 - name_size_sum - factor * gap_size_sum
+    local front_end_gap = total_end_gap * notes[1] / (128 - notes[#notes] + notes[1])
 
-    local x = end_gap
+    -- If we've got a negative end gap then for get the end gap and
+    -- recalculate our factor:
+    --
+    -- (all the name sizes) + factor * (all the gap sizes) = 128
+
+    if total_end_gap < 0 then
+        factor = (128 - name_size_sum) / gap_size_sum
+        front_end_gap = 0
+    end
+
+    -- Write all the note names
+
+    local x = front_end_gap
     for i, n in ipairs(notes) do
         screen.move(x, 63)
         screen.text( name[i] )
