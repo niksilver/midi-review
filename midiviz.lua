@@ -56,6 +56,7 @@ TIMELINE_WIDTH = 118
 
 SC_VOICE = 1
 SC_BUFFER = 1
+SC_BUFFER_START = 1
 
 -- Initialise softcut for recording and playback
 --
@@ -64,7 +65,7 @@ function init()
 
     -- Setup and play parameters for softcut
 
-    softcut.buffer_clear(SC_VOICE)
+    softcut.buffer_clear()    -- Clear all buffers
     softcut.enable(SC_VOICE, 1)    -- Enable (1) the voice
     softcut.buffer(SC_VOICE, SC_BUFFER)    -- Link the voice to the buffer
     softcut.level(SC_VOICE, 1.0)    -- Output level for the voice
@@ -73,12 +74,18 @@ function init()
     softcut.position(SC_VOICE, 1)    -- Play position at the start
     softcut.play(SC_VOICE, 0)    -- Don't play the voice yet (0 = off)
 
+    -- Even though we're not looping we need to say where the voice runs.
+    -- We'll have 5 minutes of audio.
+
+    softcut.loop_start(SC_VOICE, SC_BUFFER_START)
+    softcut.loop_end(SC_VOICE, SC_BUFFER_START + 5 * 60)
+
     -- Record paramaters
 
     softcut.level_input_cut(1, SC_VOICE, 1.0)    -- Input level of channel 1
     softcut.level_input_cut(2, SC_VOICE, 1.0)    -- Input level of channel 2
     softcut.rec_level(SC_VOICE, 1.0)    -- Record level for the voice
-    softcut.pre_level(SC_VOICE, 0.0)    -- Pre-amp level for the voice
+    softcut.pre_level(SC_VOICE, 0.0)    -- Preserve level for the voice
     softcut.rec(SC_VOICE, 0)    -- Don't record to the voice yet (0 = off)
 end
 
@@ -121,7 +128,7 @@ function redraw()
 
     -- From our current idx, draw all the notes as vertical lines.
     -- We'll also save the notes to display the names.
-    
+
     screen.level(15)
     if status.last_event ~= NO_EVENT then
         -- We've just had some event, so work out what data we need to display
@@ -326,6 +333,7 @@ function key(n, z)
                 end
 
                 reset_ndata_player()
+                stop_playing_audio()
                 status.mode = STOP
             end
 
@@ -396,8 +404,7 @@ end
 -- Start recording audio
 --
 function start_recording_audio()
-    print ("start_recording_audio()")
-    softcut.buffer_clear(SC_VOICE)    -- Clear the buffer for the voice
+    softcut.buffer_clear()    -- Clear all the buffers
     softcut.position(SC_VOICE, 1)    -- Play position at the start
     softcut.rec(SC_VOICE, 1)    -- Start recording (1 = on)
 end
@@ -405,22 +412,24 @@ end
 -- Stop recording audio
 --
 function stop_recording_audio()
-    print ("stop_recording_audio()")
     softcut.rec(SC_VOICE, 0)    -- Stop recording (0 = off)
 end
 
 -- Stop playing audio
 --
 function stop_playing_audio()
-    print ("stop_playing_audio()")
     softcut.play(SC_VOICE, 0)    -- Stop playing (0 = off)
 end
 
--- Start playing audio
+-- Start playing audio from the point of where we are in the note data
 --
 function start_playing_audio()
-    print ("start_playing_audio()")
-    softcut.position(SC_VOICE, 1)    -- Play position at the start
+    local position = SC_BUFFER_START
+    if idx > 0 then
+        position = SC_BUFFER_START + (idx_ndata[idx].time - idx_ndata[1].time)
+    end
+
+    softcut.position(SC_VOICE, position)
     softcut.play(SC_VOICE, 1)    -- Start playing (1 = on)
 end
 
