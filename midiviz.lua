@@ -3,7 +3,7 @@
 -- Visualisation of MIDI key presses.
 --
 -- k2 = play/stop
--- k2 long press (1 sec) = record
+-- k2 long press = record
 -- e2 = scroll through time
 
 musicutil = require('musicutil')
@@ -26,7 +26,7 @@ status = {
     last_event = NO_EVENT,
 }
 
-LONG_PRESS_SECS = 1.0  -- Length of a long press, in seconds
+LONG_PRESS_SECS = 0.5  -- Length of a long press, in seconds
 
 -- The metronome for playing back note data; nil means stopped.
 
@@ -162,7 +162,7 @@ function redraw()
     end
 
     -- From our current idx, draw all the notes as vertical lines.
-    -- We'll also save the notes to display the names.
+    -- We'll also save the notes to display the note names.
 
     screen.level(15)
     if status.last_event ~= NO_EVENT then
@@ -173,7 +173,7 @@ function redraw()
         local notes = {}
 
         for note, vel in pairs(data) do
-            screen.move(note, 56)
+            screen.move(note, 55)
             screen.line_rel(0, math.min(-vel * 0.36, -1))
             screen.stroke()
 
@@ -191,7 +191,7 @@ function redraw()
     screen.update()
 end
 
--- Display the notes at the bottom of the screen.
+-- Display the note names at the bottom of the screen.
 -- @param notes    List of MIDI notes (each is 0-127).
 --
 function display_note_names(notes)
