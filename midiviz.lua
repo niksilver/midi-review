@@ -50,13 +50,23 @@ function init_note_data()
 end
 init_note_data()
 
-TIMELINE_WIDTH = 118
+-- Some visual positioning
 
--- The recording voice (head) and buffer for softcut
+TIMELINE_WIDTH = 118
+TIMELINE_Y = 2
+AUDIO_PLAY_Y = 6
+
+-- The recording voice (head) and buffer for softcut, plus
+-- our playing position. The play_start_idx relates to the
+-- MIDI data, not the audio, but we keep it with the audio
+-- because it's only used when we draw the audio play line.
 
 SC_VOICE = 1
 SC_BUFFER = 1
 SC_BUFFER_START = 1
+
+audio_position = nil
+play_start_idx = nil
 
 -- Initialise softcut for recording and playback
 --
@@ -99,8 +109,8 @@ function redraw()
     -- where we are now.
 
     screen.level(2)
-    screen.move(0, 2)
-    screen.line(TIMELINE_WIDTH, 2)
+    screen.move(0, TIMELINE_Y)
+    screen.line(TIMELINE_WIDTH, TIMELINE_Y)
     screen.stroke()
 
     if idx > 0 then
@@ -112,6 +122,31 @@ function redraw()
         -- Draw the current notch. We must do this last to ensure it
         -- shows up over the other notches
         draw_notch(idx, 15)
+    end
+
+    -- If we're playing, draw our audio progress. It is a line drawn
+    -- from the current note notch (idx).
+
+    if status.mode == PLAY and idx > 0 then
+        local start_x = timeline_x(idx)
+        local current_length = 1
+
+        if idx < #idx_ndata then
+            local full_time = idx_ndata[idx+1].time - idx_ndata[idx].time
+            local current_time = audio_position - idx_audio_position(idx)
+            local full_length = timeline_x(idx+1) - start_x
+            current_length = math.max(1, full_length * current_time / full_time)
+        end
+
+        screen.level(2)
+        screen.move(timeline_x(play_start_idx), AUDIO_PLAY_Y)
+        screen.line(start_x, AUDIO_PLAY_Y)
+        screen.stroke()
+
+        screen.level(15)
+        screen.move(start_x, AUDIO_PLAY_Y)
+        screen.line_rel(current_length, 0)
+        screen.stroke()
     end
 
     -- Show the current mode
@@ -139,7 +174,7 @@ function redraw()
 
         for note, vel in pairs(data) do
             screen.move(note, 56)
-            screen.line_rel(0, math.min(-vel * 0.4, -1))
+            screen.line_rel(0, math.min(-vel * 0.36, -1))
             screen.stroke()
 
             table.insert(notes, note)
@@ -273,6 +308,16 @@ end
 -- @param level    Screen brightness
 --
 function draw_notch(i, level)
+    screen.level(level)
+    screen.move(timeline_x(i), TIMELINE_Y - 2)
+    screen.line_rel(0, TIMELINE_Y + 1)
+    screen.stroke()
+end
+
+-- The screen x position of a notch on the timeline.
+-- @param i    The index of the note.
+--
+function timeline_x(i)
     -- Get the time difference from first to last note
     local time_first = idx_ndata[1].time
     local time_last = idx_ndata[#idx_ndata].time
@@ -283,11 +328,7 @@ function draw_notch(i, level)
     local x = (ndata.time - time_first) / time_diff * TIMELINE_WIDTH + 1
     if time_diff == 0 then x = 1 end
 
-    -- Draw
-    screen.level(level)
-    screen.move(x, 0)
-    screen.line_rel(0, 3)
-    screen.stroke()
+    return x
 end
 
 -- Handle key presses
@@ -420,17 +461,41 @@ end
 --
 function stop_playing_audio()
     softcut.play(SC_VOICE, 0)    -- Stop playing (0 = off)
+
+    -- Stop polling for position
+
+    softcut.poll_stop_phase()
+    audio_position = nil
+    play_start_idx = nil
 end
 
--- Start playing audio from the point of where we are in the note data
+-- Start playing audio from the point of where we are in the note data.
+-- We'll also track our audio play position
 --
 function start_playing_audio()
-    local position = SC_BUFFER_START
+    audio_position = SC_BUFFER_START
     if idx > 0 then
-        position = SC_BUFFER_START + (idx_ndata[idx].time - idx_ndata[1].time)
+        audio_position = idx_audio_position(idx)
     end
 
-    softcut.position(SC_VOICE, position)
+    play_start_idx = idx
+
+    -- Before we start playing, set up a regular position updater
+
+    softcut.position(SC_VOICE, audio_position)
+    softcut.phase_quant(SC_VOICE, 1/20)
+    softcut.event_phase(function(_, pos)
+        audio_position = pos
+        redraw()
+    end)
+    softcut.poll_start_phase()
+
     softcut.play(SC_VOICE, 1)    -- Start playing (1 = on)
+end
+
+-- The softcut audio position of note number i.
+--
+function idx_audio_position(i)
+    return SC_BUFFER_START + (idx_ndata[i].time - idx_ndata[1].time)
 end
 
