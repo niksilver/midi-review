@@ -404,23 +404,35 @@ function key(n, z)
             else
                 -- Short press - go into stop mode
 
-                -- If we were recording, and we got some MIDI data,
-                -- record final empty note data and stop audio recording.
-                if status.mode == RECORD and idx > 0 then
-                    note_vel = {}
-                    append_ndata()
-                    stop_recording_audio()
-                end
-
-                reset_ndata_player()
-                stop_playing_audio()
-                status.mode = STOP
+                to_stop_mode()
             end
 
             status.k2_down = nil
             redraw()
         end
     end
+    if n == 3 and z == 0 then
+        local stamp = util.time()
+        _norns.screen_export_png("/home/we/dust/midiviz_" .. stamp .. ".png")
+    end
+end
+
+-- Go into stop mode
+--
+function to_stop_mode()
+    -- If we were recording, and we got some MIDI data,
+    -- record final empty note data and stop audio recording.
+
+    if status.mode == RECORD and idx > 0 then
+        note_vel = {}
+        append_ndata()
+    end
+
+    stop_recording_audio()
+
+    reset_ndata_player()
+    stop_playing_audio()
+    status.mode = STOP
 end
 
 -- Play the next MIDI note data (and continue)
@@ -462,11 +474,32 @@ end
 
 -- Encoders:
 -- e2 = scroll back and forth through our notes
+-- If we're playing then we need to restart that.
 --
 function enc(n, d)
-    if n == 2 and #idx_ndata > 0 then
-        idx = util.clamp(idx + d, 1, #idx_ndata)
-        status.last_event = TRANSPORT_EVENT
+    if n == 2 then
+        if #idx_ndata > 0 then
+            idx = util.clamp(idx + d, 1, #idx_ndata)
+            status.last_event = TRANSPORT_EVENT
+        end
+
+
+        if status.mode == RECORD then
+            -- Stop recording
+
+            to_stop_mode()
+
+        elseif status.mode == PLAY then
+            -- Restart playback from the new point
+
+            reset_ndata_player()
+            stop_playing_audio()
+
+            status.mode = PLAY
+            play_next_ndata()
+            start_playing_audio()
+        end
+
         redraw()
     end
 end
