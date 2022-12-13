@@ -236,7 +236,7 @@ midi_device.event = function(data)
         -- If it's note on, add to the current 'on' notes
         note_vel[msg.note] = msg.vel
         if status.mode == RECORD then
-            append_ndata(note_vel)
+            append_ndata()
         end
         status.last_event = NOTE_EVENT
 
@@ -249,14 +249,14 @@ midi_device.event = function(data)
         -- If it's note off, remove from the current 'on' notes
         note_vel[msg.note] = nil
         if status.mode == RECORD then
-            append_ndata(note_vel)
+            append_ndata()
         end
         status.last_event = NOTE_EVENT
     end
     redraw()
 end
 
--- Add note data to the end of our current history.
+-- Add note data (the note_val table) to the end of our current history.
 --
 function append_ndata()
     local millis = util.time()
@@ -328,7 +328,8 @@ function key(n, z)
                 -- If we were recording, record final empty note data
                 -- and stop audio recording
                 if status.mode == RECORD then
-                    append_ndata({})
+                    note_vel = {}
+                    append_ndata()
                     stop_recording_audio()
                 end
 
