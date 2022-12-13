@@ -53,8 +53,8 @@ init_note_data()
 -- Some visual positioning
 
 TIMELINE_WIDTH = 116
-TIMELINE_Y = 2
-AUDIO_PLAY_Y = 6
+TIMELINE_Y = 3
+AUDIO_PLAY_Y = 7
 
 -- The recording voice (head) and buffer for softcut, plus
 -- our playing position. The play_start_idx relates to the
@@ -172,18 +172,13 @@ function redraw()
 
         for note, vel in pairs(data) do
             screen.move(note, 55)
-            screen.line_rel(0, math.min(-vel * 0.36, -1))
+            screen.line_rel(0, math.min(-vel * 0.33, -1))
             screen.stroke()
 
             table.insert(notes, note)
         end
 
         display_note_names(notes)
-    else
-        -- We haven't had any events yet
-
-        screen.move(48, 40)
-        screen.text("Waiting")
     end
 
     screen.update()
@@ -195,7 +190,7 @@ function draw_play_button()
     screen.level(15)
 
     local x = TIMELINE_WIDTH + 8
-    local y = TIMELINE_Y - 2
+    local y = TIMELINE_Y - 3
     local height = 5
 
     screen.move(x, y + 1)
@@ -217,7 +212,7 @@ end
 --
 function draw_stop_button()
     screen.level(0)
-    screen.circle(TIMELINE_WIDTH + 8, TIMELINE_Y + 2, 3)
+    screen.circle(TIMELINE_WIDTH + 8, TIMELINE_Y + 1, 3)
     screen.level(15)
     screen.stroke()
 end
@@ -227,10 +222,10 @@ end
 function draw_record_button()
     screen.level(15)
 
-    screen.circle(TIMELINE_WIDTH + 8, TIMELINE_Y + 2, 1.5)
+    screen.circle(TIMELINE_WIDTH + 8, TIMELINE_Y + 1, 1.5)
     screen.fill()
 
-    screen.circle(TIMELINE_WIDTH + 8, TIMELINE_Y + 2, 3)
+    screen.circle(TIMELINE_WIDTH + 8, TIMELINE_Y + 1, 3)
     screen.stroke()
 end
 
@@ -409,9 +404,9 @@ function key(n, z)
             else
                 -- Short press - go into stop mode
 
-                -- If we were recording, record final empty note data
-                -- and stop audio recording
-                if status.mode == RECORD then
+                -- If we were recording, and we got some MIDI data,
+                -- record final empty note data and stop audio recording.
+                if status.mode == RECORD and idx > 0 then
                     note_vel = {}
                     append_ndata()
                     stop_recording_audio()
