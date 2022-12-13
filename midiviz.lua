@@ -151,14 +151,12 @@ function redraw()
 
     -- Show the current mode
 
-    screen.level(15)
-    screen.move(122, 5)
     if status.mode == PLAY then
-        screen.text(">")
+        draw_play_button()
     elseif status.mode == RECORD then
-        screen.text("R")
+        draw_record_button()
     else
-        screen.text("-")
+        draw_stop_button()
     end
 
     -- From our current idx, draw all the notes as vertical lines.
@@ -189,6 +187,51 @@ function redraw()
     end
 
     screen.update()
+end
+
+-- Draw a play button
+--
+function draw_play_button()
+    screen.level(15)
+
+    local x = TIMELINE_WIDTH + 6
+    local y = TIMELINE_Y - 2
+    local height = 5
+
+    screen.move(x, y + 1)
+    screen.line_rel(0, height)
+    screen.stroke()
+
+    for i = height, 1, -2 do
+        y = y + 1
+        height = i
+        screen.pixel(x, y)
+        screen.fill()
+        screen.pixel(x, y + height - 1)
+        screen.fill()
+        x = x + 1
+    end
+end
+
+-- Draw a stop button
+--
+function draw_stop_button()
+    screen.level(0)
+    screen.circle(TIMELINE_WIDTH + 6, TIMELINE_Y + 2, 3)
+    screen.level(15)
+    screen.stroke()
+end
+
+-- Draw a record button
+--
+function draw_record_button()
+    screen.level(15)
+
+    screen.circle(TIMELINE_WIDTH + 6, TIMELINE_Y + 2, 1.5)
+    screen.fill()
+
+    screen.circle(TIMELINE_WIDTH + 6, TIMELINE_Y + 2, 3)
+    screen.stroke()
 end
 
 -- Display the note names at the bottom of the screen.
