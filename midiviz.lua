@@ -52,7 +52,7 @@ init_note_data()
 
 -- Some visual positioning
 
-TIMELINE_WIDTH = 118
+TIMELINE_WIDTH = 116
 TIMELINE_Y = 2
 AUDIO_PLAY_Y = 6
 
@@ -194,7 +194,7 @@ end
 function draw_play_button()
     screen.level(15)
 
-    local x = TIMELINE_WIDTH + 6
+    local x = TIMELINE_WIDTH + 8
     local y = TIMELINE_Y - 2
     local height = 5
 
@@ -217,7 +217,7 @@ end
 --
 function draw_stop_button()
     screen.level(0)
-    screen.circle(TIMELINE_WIDTH + 6, TIMELINE_Y + 2, 3)
+    screen.circle(TIMELINE_WIDTH + 8, TIMELINE_Y + 2, 3)
     screen.level(15)
     screen.stroke()
 end
@@ -227,10 +227,10 @@ end
 function draw_record_button()
     screen.level(15)
 
-    screen.circle(TIMELINE_WIDTH + 6, TIMELINE_Y + 2, 1.5)
+    screen.circle(TIMELINE_WIDTH + 8, TIMELINE_Y + 2, 1.5)
     screen.fill()
 
-    screen.circle(TIMELINE_WIDTH + 6, TIMELINE_Y + 2, 3)
+    screen.circle(TIMELINE_WIDTH + 8, TIMELINE_Y + 2, 3)
     screen.stroke()
 end
 
