@@ -427,9 +427,9 @@ function key(n, z)
                 -- Short press - go into play mode
 
                 stop_recording_audio()
-                start_playing_audio()
 
                 status.mode = PLAY
+                start_playing_audio()
             else
                 -- Short press - go into stop mode
 
