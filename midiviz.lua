@@ -30,7 +30,7 @@ LONG_PRESS_SECS = 0.5  -- Length of a long press, in seconds
 
 -- The metronome for playing back note data; nil means stopped.
 
-ndata_player = nil
+-- ndata_player = nil
 
 -- Our MIDI device
 
@@ -68,6 +68,8 @@ SC_BUFFER_START = 1
 audio_position = nil
 play_start_idx = nil
 
+SC_UPDATE_FREQ = 1/20    -- Screen update frequency from audio playing (seconds)
+
 -- Initialise softcut for recording and playback
 --
 function init()
@@ -97,6 +99,36 @@ function init()
     softcut.rec_level(SC_VOICE, 1.0)    -- Record level for the voice
     softcut.pre_level(SC_VOICE, 0.0)    -- Preserve level for the voice
     softcut.rec(SC_VOICE, 0)    -- Don't record to the voice yet (0 = off)
+
+    -- Update the audio play data (but only if we're playing)
+
+    softcut.phase_quant(SC_VOICE, SC_UPDATE_FREQ)
+    softcut.event_phase(function(i, pos)
+        -- Only do something if we're in play mode
+        if status.mode ~= PLAY then
+            return
+        end
+
+        audio_position = pos
+        print("    audio_position (2) = " .. audio_position)
+
+        -- We may need to move our note number, or stop
+
+        if idx == #idx_ndata or pos >= idx_audio_position(#idx_ndata) then
+            idx = #idx_ndata
+            to_stop_mode()
+            redraw()
+            return
+        end
+
+        while idx_audio_position(idx+1) <= pos do
+            idx = idx + 1
+        end
+
+        redraw()
+    end)
+    softcut.poll_start_phase()
+
 end
 
 -- (Re)draw the screen
@@ -398,9 +430,10 @@ function key(n, z)
 
                 stop_recording_audio()
 
-                status.mode = PLAY
-                play_next_ndata()
+                -- play_next_ndata()
                 start_playing_audio()
+
+                status.mode = PLAY
             else
                 -- Short press - go into stop mode
 
@@ -430,7 +463,7 @@ function to_stop_mode()
 
     stop_recording_audio()
 
-    reset_ndata_player()
+    -- reset_ndata_player()
     stop_playing_audio()
     status.mode = STOP
 end
@@ -441,7 +474,7 @@ function play_next_ndata()
     -- We should be displaying the current MIDI note, so we need to
     -- stop if at the end, or queue up the next note.
 
-    reset_ndata_player()
+    -- reset_ndata_player()
 
     if idx == #idx_ndata then
         -- End of the note data
@@ -496,7 +529,7 @@ function enc(n, d)
             stop_playing_audio()
 
             status.mode = PLAY
-            play_next_ndata()
+            -- play_next_ndata()
             start_playing_audio()
         end
 
@@ -535,31 +568,27 @@ function stop_playing_audio()
 
     -- Stop polling for position
 
-    softcut.poll_stop_phase()
+    -- softcut.poll_stop_phase()
     audio_position = nil
     play_start_idx = nil
 end
 
 -- Start playing audio from the point of where we are in the note data.
--- We'll also track our audio play position
+-- We'll also track our audio play position and update the note index
+-- on the timeline.
 --
 function start_playing_audio()
     audio_position = SC_BUFFER_START
     if idx > 0 then
         audio_position = idx_audio_position(idx)
     end
+    print("start_playing_audio():")
+    print("    idx = " .. idx)
+    print("    audio_position = " .. audio_position)
 
     play_start_idx = idx
 
-    -- Before we start playing, set up a regular position updater
-
     softcut.position(SC_VOICE, audio_position)
-    softcut.phase_quant(SC_VOICE, 1/20)
-    softcut.event_phase(function(_, pos)
-        audio_position = pos
-        redraw()
-    end)
-    softcut.poll_start_phase()
 
     softcut.play(SC_VOICE, 1)    -- Start playing (1 = on)
 end
