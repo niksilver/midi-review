@@ -110,7 +110,6 @@ function init()
         end
 
         audio_position = pos
-        print("    audio_position (2) = " .. audio_position)
 
         -- We may need to move our note number, or stop
 
@@ -417,7 +416,6 @@ function key(n, z)
                 -- We don't start writing audio and MIDI data here;
                 -- we start when we get the first MIDI note.
 
-                reset_ndata_player()
                 init_note_data()
                 stop_recording_audio()
                 stop_playing_audio()
@@ -429,8 +427,6 @@ function key(n, z)
                 -- Short press - go into play mode
 
                 stop_recording_audio()
-
-                -- play_next_ndata()
                 start_playing_audio()
 
                 status.mode = PLAY
@@ -462,47 +458,9 @@ function to_stop_mode()
     end
 
     stop_recording_audio()
-
-    -- reset_ndata_player()
     stop_playing_audio()
+
     status.mode = STOP
-end
-
--- Play the next MIDI note data (and continue)
---
-function play_next_ndata()
-    -- We should be displaying the current MIDI note, so we need to
-    -- stop if at the end, or queue up the next note.
-
-    -- reset_ndata_player()
-
-    if idx == #idx_ndata then
-        -- End of the note data
-
-        stop_playing_audio()
-        status.mode = STOP
-        redraw()
-    else
-        local duration = idx_ndata[idx+1].time - idx_ndata[idx].time
-        ndata_player = metro.init(
-            function()
-                idx = idx + 1
-                redraw()
-                play_next_ndata()
-            end, duration, 1
-        )
-        ndata_player:start()
-    end
-end
-
--- Reset/cancel the note data player
---
-function reset_ndata_player()
-    if ndata_player then
-        ndata_player:stop()
-        metro.free(ndata_player.id)
-        ndata_player = nil
-    end
 end
 
 -- Encoders:
@@ -525,11 +483,9 @@ function enc(n, d)
         elseif status.mode == PLAY then
             -- Restart playback from the new point
 
-            reset_ndata_player()
             stop_playing_audio()
 
             status.mode = PLAY
-            -- play_next_ndata()
             start_playing_audio()
         end
 
@@ -565,10 +521,6 @@ end
 --
 function stop_playing_audio()
     softcut.play(SC_VOICE, 0)    -- Stop playing (0 = off)
-
-    -- Stop polling for position
-
-    -- softcut.poll_stop_phase()
     audio_position = nil
     play_start_idx = nil
 end
@@ -582,14 +534,10 @@ function start_playing_audio()
     if idx > 0 then
         audio_position = idx_audio_position(idx)
     end
-    print("start_playing_audio():")
-    print("    idx = " .. idx)
-    print("    audio_position = " .. audio_position)
 
     play_start_idx = idx
 
     softcut.position(SC_VOICE, audio_position)
-
     softcut.play(SC_VOICE, 1)    -- Start playing (1 = on)
 end
 
