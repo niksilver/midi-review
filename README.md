@@ -16,3 +16,4 @@ you've recorded.
 - k2 long press = record
 - e2 = scroll through time
 
+![Screenshot](screenshot.png)
