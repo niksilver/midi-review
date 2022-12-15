@@ -64,14 +64,18 @@ TIMELINE_WIDTH = 116
 TIMELINE_Y = 3
 AUDIO_PLAY_Y = 7
 
--- The recording voice (head) and buffer for softcut, plus
--- our playing position. The play_start_idx relates to the
--- MIDI data, not the audio, but we keep it with the audio
--- because it's only used when we draw the audio play line.
+-- The recording voice (head) and buffer for softcut.
+-- The start and end of the buffer, because if we're not on
+-- a rolling record window then we need to stop recording at the end.
+-- Our playing position.
+-- The play_start_idx relates to the MIDI data, not the audio,
+-- but we keep it with the audio because it's only used when
+-- we draw the audio play line.
 
 SC_VOICE = 1
 SC_BUFFER = 1
 SC_BUFFER_START = 1
+SC_BUFFER_END = 1 + 5
 
 audio_position = nil
 play_start_idx = nil
@@ -112,7 +116,16 @@ function init()
 
     softcut.phase_quant(SC_VOICE, SC_UPDATE_FREQ)
     softcut.event_phase(function(i, pos)
+        -- If we've reached the end of the buffer and we're not in a rolling
+        -- window, then stop recording.
+
+        if state.mode == RECORD and pos >= SC_BUFFER_END then
+            to_stop_mode()
+            return
+        end
+
         -- Only do something if we're in play mode
+
         if state.mode ~= PLAY then
             return
         end
