@@ -8,21 +8,29 @@
 
 musicutil = require('musicutil')
 
--- Current status, including
+-- Current key/screen state, including
 -- when k2 was pressed down (for long press);
+-- what the popup message is;
+-- when the popup appeared;
+-- the popup coroutine handle for its timeout;
 -- what the last MIDI event was.
 
 STOP = 0
 PLAY = 1
 RECORD = 2
 
+POPUP_DURATION = 1.0
+
 NO_EVENT = 10
 NOTE_EVENT = 11
 TRANSPORT_EVENT = 12
 
-status = {
+state = {
     mode = STOP,
     k2_down = nil,
+    popup_message = nil,
+    popup_appeared = 0,
+    popup_handle = nil,
     last_event = NO_EVENT,
 }
 
@@ -105,7 +113,7 @@ function init()
     softcut.phase_quant(SC_VOICE, SC_UPDATE_FREQ)
     softcut.event_phase(function(i, pos)
         -- Only do something if we're in play mode
-        if status.mode ~= PLAY then
+        if state.mode ~= PLAY then
             return
         end
 
@@ -158,7 +166,7 @@ function redraw()
     -- If we're playing, draw our audio progress. It is a line drawn
     -- from the current note notch (idx).
 
-    if status.mode == PLAY and idx > 0 then
+    if state.mode == PLAY and idx > 0 then
         local start_x = timeline_x(idx)
         local current_length = 1
 
@@ -182,9 +190,9 @@ function redraw()
 
     -- Show the current mode
 
-    if status.mode == PLAY then
+    if state.mode == PLAY then
         draw_play_button()
-    elseif status.mode == RECORD then
+    elseif state.mode == RECORD then
         draw_record_button()
     else
         draw_stop_button()
@@ -194,11 +202,11 @@ function redraw()
     -- We'll also save the notes to display the note names.
 
     screen.level(15)
-    if status.last_event ~= NO_EVENT then
+    if state.last_event ~= NO_EVENT then
         -- We've just had some event, so work out what data we need to display
 
         local data =
-            status.last_event == NOTE_EVENT and note_vel or idx_ndata[idx].note_vel
+            state.last_event == NOTE_EVENT and note_vel or idx_ndata[idx].note_vel
         local notes = {}
 
         for note, vel in pairs(data) do
@@ -210,6 +218,28 @@ function redraw()
         end
 
         display_note_names(notes)
+    end
+
+    -- Show or clear the popup
+
+    if util.time() >= state.popup_appeared + POPUP_DURATION then
+        state.popup_appeared = 0
+        state.popup_message = nil
+    end
+
+    if state.popup_message then
+        local length = #state.popup_message
+
+        screen.level(0)
+        screen.rect(64 - 2.5 * length, 32 - 7, length*5, 10)
+        screen.fill()
+
+        screen.level(15)
+        screen.rect(64 - 2.5 * length, 32 - 7, length*5, 10)
+        screen.stroke()
+
+        screen.move(64, 32)
+        screen.text_center(state.popup_message)
     end
 
     screen.update()
@@ -339,10 +369,10 @@ midi_device.event = function(data)
     if msg.type == "note_on" then
         -- If it's note on, add to the current 'on' notes
         note_vel[msg.note] = msg.vel
-        if status.mode == RECORD then
+        if state.mode == RECORD then
             append_ndata()
         end
-        status.last_event = NOTE_EVENT
+        state.last_event = NOTE_EVENT
 
         -- Maybe this is the trigger to start recording audio
         if #idx_ndata == 1 then
@@ -352,10 +382,10 @@ midi_device.event = function(data)
     elseif msg.type == "note_off" then
         -- If it's note off, remove from the current 'on' notes
         note_vel[msg.note] = nil
-        if status.mode == RECORD then
+        if state.mode == RECORD then
             append_ndata()
         end
-        status.last_event = NOTE_EVENT
+        state.last_event = NOTE_EVENT
     end
     redraw()
 end
@@ -363,11 +393,11 @@ end
 -- Add note data (the note_val table) to the end of our current history.
 --
 function append_ndata()
-    local millis = util.time()
+    local seconds = util.time()
 
     idx = #idx_ndata + 1
     idx_ndata[idx] = {
-        time = millis,
+        time = seconds,
         note_vel = shallow_copy(note_vel)
     }
 end
@@ -407,11 +437,11 @@ function key(n, z)
     if n == 2 then
         if z == 1 then
             -- k2 has gone down; note when
-            status.k2_down = time
+            state.k2_down = time
         else
             -- k2 has gone up...
 
-            if status.k2_down and (time - status.k2_down) >= LONG_PRESS_SECS then
+            if state.k2_down and (time - state.k2_down) >= LONG_PRESS_SECS then
                 -- Go into record mode.
                 -- We don't start writing audio and MIDI data here;
                 -- we start when we get the first MIDI note.
@@ -420,15 +450,15 @@ function key(n, z)
                 stop_recording_audio()
                 stop_playing_audio()
 
-                status.last_event = NO_EVENT
-                status.mode = RECORD
+                state.last_event = NO_EVENT
+                state.mode = RECORD
 
-            elseif status.mode == STOP then
+            elseif state.mode == STOP then
                 -- Short press - go into play mode
 
                 stop_recording_audio()
 
-                status.mode = PLAY
+                state.mode = PLAY
                 start_playing_audio()
             else
                 -- Short press - go into stop mode
@@ -436,7 +466,7 @@ function key(n, z)
                 to_stop_mode()
             end
 
-            status.k2_down = nil
+            state.k2_down = nil
             redraw()
         end
     end
@@ -452,7 +482,7 @@ function to_stop_mode()
     -- If we were recording, and we got some MIDI data,
     -- record final empty note data and stop audio recording.
 
-    if status.mode == RECORD and idx > 0 then
+    if state.mode == RECORD and idx > 0 then
         note_vel = {}
         append_ndata()
     end
@@ -460,7 +490,7 @@ function to_stop_mode()
     stop_recording_audio()
     stop_playing_audio()
 
-    status.mode = STOP
+    state.mode = STOP
 end
 
 -- Encoders:
@@ -471,23 +501,37 @@ function enc(n, d)
     if n == 2 then
         if #idx_ndata > 0 then
             idx = util.clamp(idx + d, 1, #idx_ndata)
-            status.last_event = TRANSPORT_EVENT
+            state.last_event = TRANSPORT_EVENT
         end
 
 
-        if status.mode == RECORD then
+        if state.mode == RECORD then
             -- Stop recording
 
             to_stop_mode()
 
-        elseif status.mode == PLAY then
+        elseif state.mode == PLAY then
             -- Restart playback from the new point
 
             stop_playing_audio()
 
-            status.mode = PLAY
+            state.mode = PLAY
             start_playing_audio()
         end
+
+        redraw()
+    elseif n == 3 then
+        if state.popup_handle ~= nil then
+            clock.cancel(state.popup_handle)
+        end
+
+        state.popup_message = "Hello!"
+        state.popup_appeared = util.time()
+        state.popup_handle = clock.run(function()
+            clock.sleep(POPUP_DURATION)
+            state.popup_handle = nil
+            redraw()
+        end)
 
         redraw()
     end
