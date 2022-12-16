@@ -181,5 +181,3 @@ function test_reindex_empty_sequence()
     lu.assertNil(nd.first_index)
     lu.assertNil(nd.last_index)
 end
-
-os.exit(lu.LuaUnit.run())

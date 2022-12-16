@@ -24,5 +24,5 @@ There aren't enough tests.
 
 ```
 cd lib
-lua test_idx_ndata.lua
+lua test_all.lua
 ```
