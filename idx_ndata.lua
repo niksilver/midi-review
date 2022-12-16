@@ -64,6 +64,20 @@ function C:get(i)
     return self.ndata[i]
 end
 
+-- Get the time at a given index.
+-- Shortcut for `obj.get(i).time`
+-- @param i    Index of the data.
+function C:time(i)
+    return self.ndata[i].time
+end
+
+-- Get the note_vel table at a given index.
+-- Shortcut for `obj.get(i).note_vel`
+-- @param i    Index of the data.
+function C:note_vel(i)
+    return self.ndata[i].note_vel
+end
+
 -- Delete the note data at the front of the sequence.
 --
 function C:delete_from_front()

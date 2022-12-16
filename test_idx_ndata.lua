@@ -21,12 +21,16 @@ function test_retrieve_data_and_time()
     local time = nd.timefn()
     nd:append({[11] = 111, [22] = 112})
     lu.assertEquals(nd:get(1).note_vel, {[11] = 111, [22] = 112})
+    lu.assertEquals(nd:note_vel(1),     {[11] = 111, [22] = 112})
     lu.assertAlmostEquals(nd:get(1).time, time, 0.1)
+    lu.assertAlmostEquals(nd:time(1),     time, 0.1)
 
     time = nd.timefn()
     nd:append({[33] = 113, [44] = 114})
     lu.assertEquals(nd:get(2).note_vel, {[33] = 113, [44] = 114})
+    lu.assertEquals(nd:note_vel(2),     {[33] = 113, [44] = 114})
     lu.assertAlmostEquals(nd:get(2).time, time, 0.1)
+    lu.assertAlmostEquals(nd:time(2),     time, 0.1)
 end
 
 function test_can_delete_from_front()
