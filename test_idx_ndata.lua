@@ -33,6 +33,16 @@ function test_retrieve_data_and_time()
     lu.assertAlmostEquals(nd:time(2),     time, 0.1)
 end
 
+function test_append_copies_data()
+    local nd = idx_ndata.new(os.clock)
+    nv = {[11] = 111, [22] = 112}
+
+    nd:append(nv)
+    nv[33] = 113
+    lu.assertEquals(nd:get(1).note_vel, {[11] = 111, [22] = 112})
+    lu.assertEquals(nd:note_vel(1),     {[11] = 111, [22] = 112})
+end
+
 function test_can_delete_from_front()
     local nd = idx_ndata.new(os.clock)
 

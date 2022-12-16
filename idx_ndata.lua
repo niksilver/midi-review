@@ -49,12 +49,22 @@ function C:append(data)
 
     self.ndata[self.last_index] = {
         time = self:timefn(),
-        note_vel = data,
+        note_vel = shallow_copy(data),
     }
 
     if self.first_index == nil then
         self.first_index = 1
     end
+end
+
+-- Return a shallow copy of a table
+--
+function shallow_copy(tab)
+    local copy = {}
+    for k, v in pairs(tab) do
+        copy[k] = v
+    end
+    return copy
 end
 
 -- Get the note data at a given index.
