@@ -6,7 +6,11 @@
 -- k2 long press = record
 -- e2 = scroll through time
 
+-- To do:
+--   - Do we still need record.start_index?
+
 musicutil = require('musicutil')
+idx_ndata = include('lib/idx_ndata')
 
 -- The recording voice (head) and buffer for softcut.
 -- The start and end of the buffer, because if we're not on
@@ -75,17 +79,14 @@ LONG_PRESS_SECS = 0.5  -- Length of a long press, in seconds
 
 midi_device = midi.connect()
 
--- Tracking notes.
+-- Tracking notes in a note data sequence.
 -- note_vel - Map from note value to velocity of all notes currently held
--- idx_ndata - Map from note count (starting at 1) to a table of note data:
---     - time - clock time in fractional seconds.
---     - note_vel - a note-velocity table as above.
--- idx - Current index where there's note data, or 0.
+-- idx - Current index where there's note data, or nil.
 
 function init_note_data()
     note_vel = {}
-    idx_ndata = {}
-    idx = 0
+    nd_seq = idx_ndata.new(util.time)
+    idx = nd_seq.first_index    -- This will be nil
 end
 init_note_data()
 
@@ -156,11 +157,11 @@ function init()
 
             -- We're playing, so we may need to move our note number, or stop
 
-            local idx_pos = idx_audio_position(play.start_position, 1, #idx_ndata)
-            if idx == #idx_ndata or pos >= idx_pos then
+            local idx_pos = idx_audio_position(play.start_position, 1, nd_seq.last_index)
+            if idx == nd_seq.last_index or pos >= idx_pos then
                 -- We need to stop playing
 
-                idx = #idx_ndata
+                idx = nd_seq.last_index
                 to_stop_mode()
                 redraw()
                 return
@@ -211,12 +212,12 @@ function move_recording_window(pos)
             return
         end
 
-        if idx == 0 then
+        if not idx then
             -- We haven't recorded anything yet
             return
         end
 
-        if #idx_ndata == 1 then
+        if nd_seq.first_index == 1 then
             -- We've only recorded one set of MIDI events and it's outside
             -- our rolling window, so re-arm the recording.
             init_note_data()
@@ -229,10 +230,15 @@ function move_recording_window(pos)
         -- Move our record start index forward as necessary
 
         record.start_position = idx_audio_position(record.start_position, record.start_idx, record.start_idx+1)
-        idx_ndata[record.start_idx] = nil
-        record.start_idx = record.start_idx + 1
+        -- idx_ndata[record.start_idx] = nil
+        -- record.start_idx = record.start_idx + 1
+        nd_seq:delete_from_front()
+        record.start_idx = nd_seq.first_index
 
         repeat_count = repeat_count + 1
+
+        print("move_recording_window(): [" .. record.start_idx .. ", " .. idx ..
+            "] and [" .. record.start_position .. ", " .. pos .. "]")
     until repeat_count >= 100
     print("Likely error! 100 repeat counts!")
 end
@@ -251,9 +257,10 @@ function redraw()
     screen.line(TIMELINE_WIDTH, TIMELINE_Y)
     screen.stroke()
 
-    if idx > 0 then
+    if idx then
         -- Draw the notches on the timeline
-        for i, _ in pairs(idx_ndata) do
+        -- for i, _ in pairs(idx_ndata) do
+        for i = nd_seq.first_index, nd_seq.last_index do
             draw_notch(i, 2)
         end
 
@@ -265,12 +272,14 @@ function redraw()
     -- If we're playing, draw our audio progress. It is a line drawn
     -- from the current note notch (idx).
 
-    if state.mode == PLAY and idx > 0 then
+    if state.mode == PLAY and idx then
         local start_x = timeline_x(idx)
         local current_length = 1
 
-        if idx < #idx_ndata then
-            local full_time = idx_ndata[idx+1].time - idx_ndata[idx].time
+        -- if idx < #idx_ndata then
+        if idx < nd_seq.last_index then
+            -- local full_time = idx_ndata[idx+1].time - idx_ndata[idx].time
+            local full_time = nd_seq:time(idx+1) - nd_seq:time(idx)
             local idx_pos = idx_audio_position(play.start_position, play.start_idx, idx)
             local current_time = audio_position - idx_pos
             local full_length = timeline_x(idx+1) - start_x
@@ -306,7 +315,8 @@ function redraw()
         -- We've just had some event, so work out what data we need to display
 
         local data =
-            state.last_event == NOTE_EVENT and note_vel or idx_ndata[idx].note_vel
+            -- state.last_event == NOTE_EVENT and note_vel or idx_ndata[idx].note_vel
+            state.last_event == NOTE_EVENT and note_vel or nd_seq:note_vel(idx)
         local notes = {}
 
         for note, vel in pairs(data) do
@@ -476,12 +486,14 @@ midi_device.event = function(data)
 
     if msg.type == "note_on" or msg.type == "note_off" then
         if state.mode == RECORD then
-            append_ndata()
+            -- append_ndata()
+            nd_seq:append(note_vel)
         end
         state.last_event = NOTE_EVENT
 
         -- Maybe this is the trigger to start recording audio
-        if #idx_ndata == 1 then
+        -- if #idx_ndata == 1 then
+        if nd_seq.last_index == 1 then
             record.start_idx = 1
             start_recording_audio()
         end
@@ -492,7 +504,7 @@ end
 
 -- Add note data (the note_val table) to the end of our current history.
 --
-function append_ndata()
+--[[function append_ndata()
     local seconds = util.time()
 
     idx = #idx_ndata + 1
@@ -500,7 +512,7 @@ function append_ndata()
         time = seconds,
         note_vel = shallow_copy(note_vel)
     }
-end
+end--]]
 
 -- Draw a notch on the timeline
 -- @param i    Which notch idx
@@ -526,12 +538,15 @@ function timeline_x(i)
     end
 
     -- Get the time difference from first to last note
-    local time_first = idx_ndata[start_idx].time
-    local time_last = idx_ndata[#idx_ndata].time
+    -- local time_first = idx_ndata[start_idx].time
+    local time_first = nd_seq:time(start_idx)
+    -- local time_last = idx_ndata[#idx_ndata].time
+    local time_last = nd_seq:time(nd_seq.last_index)
     local time_diff = time_last - time_first
 
     -- Calculate the x position of the notch
-    local ndata = idx_ndata[i]
+    -- local ndata = idx_ndata[i]
+    local ndata = nd_seq:get(i)
     local x = (ndata.time - time_first) / time_diff * TIMELINE_WIDTH + 1
     if time_diff == 0 then x = 1 end
 
@@ -562,12 +577,14 @@ function key(n, z)
                 state.mode = RECORD
 
             elseif state.mode == STOP then
-                -- Short press - go into play mode
+                -- Short press - go into play mode if we can
 
-                stop_recording_audio()
+                if nd_seq.first_index then
+                    stop_recording_audio()
 
-                state.mode = PLAY
-                start_playing_audio()
+                    state.mode = PLAY
+                    start_playing_audio()
+                end
             else
                 -- Short press - go into stop mode
 
@@ -590,9 +607,10 @@ function to_stop_mode()
     -- If we were recording, and we got some MIDI data,
     -- record final empty note data and stop audio recording.
 
-    if state.mode == RECORD and idx > 0 then
+    if state.mode == RECORD and idx then
         note_vel = {}
-        append_ndata()
+        -- append_ndata()
+        nd_seq:append_ndata(note_vel)
 
         -- The rolling record window might have shifted the start of
         -- the note data, so we may need to move it down.
@@ -607,9 +625,10 @@ end
 
 -- The start of the note data might not be 1. If so, copy it
 -- all back to the 1 index.
+-- This assumes we were recording and are moving into stop mode.
 --
 function reindex_note_data()
-    if record.start_idx == nil or record.start_idx == 1 then
+--[[    if record.start_idx == nil or record.start_idx == 1 then
         return
     end
 
@@ -625,7 +644,10 @@ function reindex_note_data()
     end
 
     idx = idx - offset
-    idx_ndata = idx_ndata2
+    idx_ndata = idx_ndata2--]]
+
+    local offset = nd_seq:reindex()
+    idx = idx - offset
 end
 
 -- Encoders:
@@ -634,8 +656,10 @@ end
 --
 function enc(n, d)
     if n == 2 then
-        if #idx_ndata > 0 then
-            idx = util.clamp(idx + d, 1, #idx_ndata)
+        -- if #idx_ndata > 0 then
+        if nd_seq:length() > 0 then
+            -- idx = util.clamp(idx + d, 1, #idx_ndata)
+            idx = util.clamp(idx + d, nd_seq.first_index, nd_seq.last_index)
             state.last_event = TRANSPORT_EVENT
         end
 
@@ -672,16 +696,6 @@ function enc(n, d)
     end
 end
 
--- Return a shallow copy of a table
---
-function shallow_copy(tab)
-    local copy = {}
-    for k, v in pairs(tab) do
-        copy[k] = v
-    end
-    return copy
-end
-
 -- Start recording audio
 --
 function start_recording_audio()
@@ -715,7 +729,7 @@ end
 --
 function start_playing_audio()
     audio_position = SC_BUFFER_START
-    if idx > 0 then
+    if idx then
         audio_position = idx_audio_position(SC_BUFFER_START, 1, idx)
     end
 
@@ -736,8 +750,10 @@ function idx_audio_position(start_position, start_i, i)
         print("idx_audio_position(): Error! Wrong parameters!")
     end
 
-    local i_time = idx_ndata[i].time
-    local start_i_time = idx_ndata[start_i].time
+    -- local i_time = idx_ndata[i].time
+    local i_time = nd_seq:time(i)
+    -- local start_i_time = idx_ndata[start_i].time
+    local start_i_time = nd_seq:time(start_i)
 
     local duration = i_time - start_i_time
     local end_position = start_position + duration
@@ -753,4 +769,3 @@ function idx_audio_position(start_position, start_i, i)
 
     return SC_BUFFER_START + duration_beyond
 end
-
