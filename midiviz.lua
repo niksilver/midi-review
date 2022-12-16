@@ -217,7 +217,7 @@ function move_recording_window(pos)
             return
         end
 
-        if nd_seq.first_index == 1 then
+        if nd_seq:length() == 1 then
             -- We've only recorded one set of MIDI events and it's outside
             -- our rolling window, so re-arm the recording.
             init_note_data()
