@@ -16,21 +16,32 @@ function test_count_normally()
 end
 
 function test_retrieve_data_and_time()
-    local nd = idx_ndata.new(os.clock)
+    local ticktock = 11
+    local timefn = function()
+        ticktock = ticktock + 0.5
+        return ticktock
+    end
+    local nd = idx_ndata.new(timefn)
 
-    local time = nd.timefn()
     nd:append({[11] = 111, [22] = 112})
     lu.assertEquals(nd:get(1).note_vel, {[11] = 111, [22] = 112})
     lu.assertEquals(nd:note_vel(1),     {[11] = 111, [22] = 112})
-    lu.assertAlmostEquals(nd:get(1).time, time, 0.1)
-    lu.assertAlmostEquals(nd:time(1),     time, 0.1)
+    lu.assertEquals(nd:get(1).time, 11.5)
+    lu.assertEquals(nd:time(1),     11.5)
 
-    time = nd.timefn()
     nd:append({[33] = 113, [44] = 114})
     lu.assertEquals(nd:get(2).note_vel, {[33] = 113, [44] = 114})
     lu.assertEquals(nd:note_vel(2),     {[33] = 113, [44] = 114})
-    lu.assertAlmostEquals(nd:get(2).time, time, 0.1)
-    lu.assertAlmostEquals(nd:time(2),     time, 0.1)
+    lu.assertEquals(nd:get(2).time, 12.0)
+    lu.assertEquals(nd:time(2),     12.0)
+
+    -- Now try appending using an explicit time
+
+    nd:append({[55] = 115, [66] = 116}, 99.9)
+    lu.assertEquals(nd:get(3).note_vel, {[55] = 115, [66] = 116})
+    lu.assertEquals(nd:note_vel(3),     {[55] = 115, [66] = 116})
+    lu.assertEquals(nd:get(3).time, 99.9)
+    lu.assertEquals(nd:time(3),     99.9)
 end
 
 function test_append_copies_data()

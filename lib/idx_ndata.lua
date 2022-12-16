@@ -39,8 +39,10 @@ end
 
 -- Append some note data, together with the current clock time.
 -- @param data    A map from MIDI note values (0-127) to velocity.
+-- @param time    (Optional) The clock time to set, or the default
+--     time function from the constructor will be used.
 --
-function C:append(data)
+function C:append(data, time)
     if self.last_index == nil then
         self.last_index = 1
     else
@@ -48,7 +50,7 @@ function C:append(data)
     end
 
     self.ndata[self.last_index] = {
-        time = self:timefn(),
+        time = time or self:timefn(),
         note_vel = shallow_copy(data),
     }
 
