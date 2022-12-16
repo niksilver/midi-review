@@ -157,7 +157,9 @@ function test_reindex()
     nd:delete_from_front()
     lu.assertEquals(nd:length(), 4)
 
-    nd:reindex()
+    local offset = nd:reindex()
+
+    lu.assertEquals(offset, 2)
 
     lu.assertEquals(nd:length(), 4)
     lu.assertEquals(nd.first_index, 1)
@@ -171,7 +173,9 @@ end
 function test_reindex_empty_sequence()
     local nd = idx_ndata.new(os.clock)
 
-    nd:reindex()
+    local offset = nd:reindex()
+
+    lu.assertEquals(offset, 0)
 
     lu.assertEquals(nd:length(), 0)
     lu.assertNil(nd.first_index)

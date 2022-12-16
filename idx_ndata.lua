@@ -102,10 +102,11 @@ function C:delete_from_front()
 end
 
 -- Reindex the note data so that the sequence starts from index 1
+-- @return    The number of places each index moved back.
 --
 function C:reindex()
     if self.first_index == nil or self.first_index == 1 then
-        return
+        return 0
     end
 
     local offset = self.first_index - 1
@@ -122,6 +123,8 @@ function C:reindex()
     self.ndata = ndata2
     self.first_index = 1
     self.last_index = self.last_index - offset
+
+    return offset
 end
 
 -- The function used to get the time when we append data.
