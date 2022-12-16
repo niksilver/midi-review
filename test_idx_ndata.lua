@@ -98,9 +98,6 @@ function test_can_delete_from_front()
     lu.assertEquals(nd:length(), 0)
 end
 
--- To do:
--- - Can get first data correctly
-
 function test_indices_update_correctly()
     local nd = idx_ndata.new(os.clock)
 
@@ -141,6 +138,42 @@ function test_indices_update_correctly()
     lu.assertEquals(nd:get(nd.last_index).note_vel,  {[24] = 104})
 
     nd:delete_from_front()
+    lu.assertNil(nd.first_index)
+    lu.assertNil(nd.last_index)
+end
+
+function test_reindex()
+    local nd = idx_ndata.new(os.clock)
+
+    -- Append and delete items
+
+    nd:append({[31] = 71})
+    nd:append({[32] = 72})
+    nd:append({[33] = 73})
+    nd:append({[34] = 74})
+    nd:append({[35] = 75})
+    nd:append({[36] = 76})
+    nd:delete_from_front()
+    nd:delete_from_front()
+    lu.assertEquals(nd:length(), 4)
+
+    nd:reindex()
+
+    lu.assertEquals(nd:length(), 4)
+    lu.assertEquals(nd.first_index, 1)
+    lu.assertEquals(nd.last_index, 4)
+    lu.assertEquals(nd:get(1).note_vel, {[33] = 73})
+    lu.assertEquals(nd:get(2).note_vel, {[34] = 74})
+    lu.assertEquals(nd:get(3).note_vel, {[35] = 75})
+    lu.assertEquals(nd:get(4).note_vel, {[36] = 76})
+end
+
+function test_reindex_empty_sequence()
+    local nd = idx_ndata.new(os.clock)
+
+    nd:reindex()
+
+    lu.assertEquals(nd:length(), 0)
     lu.assertNil(nd.first_index)
     lu.assertNil(nd.last_index)
 end

@@ -101,6 +101,29 @@ function C:delete_from_front()
     end
 end
 
+-- Reindex the note data so that the sequence starts from index 1
+--
+function C:reindex()
+    if self.first_index == nil or self.first_index == 1 then
+        return
+    end
+
+    local offset = self.first_index - 1
+    local ndata2 = {}
+
+    for src, d in pairs(self.ndata) do
+        local dst = src - offset
+        ndata2[src - offset] = {
+            time = d.time,
+            note_vel = d.note_vel
+        }
+    end
+
+    self.ndata = ndata2
+    self.first_index = 1
+    self.last_index = self.last_index - offset
+end
+
 -- The function used to get the time when we append data.
 -- Nil by default
 --
