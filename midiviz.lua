@@ -267,6 +267,8 @@ function redraw()
         -- Draw the current notch. We must do this last to ensure it
         -- shows up over the other notches
         draw_notch(idx, 15)
+    else
+        print("No notches to draw")
     end
 
     -- If we're playing, draw our audio progress. It is a line drawn
@@ -488,6 +490,7 @@ midi_device.event = function(data)
         if state.mode == RECORD then
             -- append_ndata()
             nd_seq:append(note_vel)
+            idx = nd_seq.last_index
         end
         state.last_event = NOTE_EVENT
 
@@ -610,7 +613,8 @@ function to_stop_mode()
     if state.mode == RECORD and idx then
         note_vel = {}
         -- append_ndata()
-        nd_seq:append_ndata(note_vel)
+        nd_seq:append(note_vel)
+        idx = nd_seq.last_index
 
         -- The rolling record window might have shifted the start of
         -- the note data, so we may need to move it down.
