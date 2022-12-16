@@ -20,24 +20,41 @@ function C.new(fn)
     obj.timefn = fn
     obj.ndata = {}
 
+    -- Index of the first and last items
+    obj.first_index = nil
+    obj.last_index = nil
+
     return obj
 end
 
 -- How many items of note data do we have?
 --
 function C:length()
-    return #self.ndata
+    if self.first_index == nil then
+        return 0
+    end
+
+    return self.last_index - self.first_index + 1
 end
 
 -- Append some note data, together with the current clock time.
 -- @param data    A map from MIDI note values (0-127) to velocity.
 --
 function C:append(data)
-    local last_index = self:length()
-    self.ndata[last_index+1] = {
+    if self.last_index == nil then
+        self.last_index = 1
+    else
+        self.last_index = self.last_index + 1
+    end
+
+    self.ndata[self.last_index] = {
         time = self:timefn(),
         note_vel = data,
     }
+
+    if self.first_index == nil then
+        self.first_index = 1
+    end
 end
 
 -- Get the note data at a given index.
@@ -45,6 +62,13 @@ end
 -- @return    A table with keys `time` and `note_vel`.
 function C:get(i)
     return self.ndata[i]
+end
+
+-- Delete the note data at the front of the sequence.
+--
+function C:delete_from_front()
+    self.ndata[self.first_index] = nil
+    self.first_index = self.first_index + 1
 end
 
 -- The function used to get the time when we append data.
