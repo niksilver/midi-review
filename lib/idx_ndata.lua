@@ -7,7 +7,7 @@
 --
 -- Indices should be contiguous, but may not start at 1.
 
-C = {}
+local C = {}
 
 -- Create a new sequence.
 -- @param fn    The function to call to get the current time.

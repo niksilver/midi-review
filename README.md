@@ -17,3 +17,12 @@ you've recorded.
 - e2 = scroll through time
 
 ![Screenshot](screenshot.png)
+
+## Running the tests
+
+There aren't enough tests.
+
+```
+cd lib
+lua test_idx_ndata.lua
+```
