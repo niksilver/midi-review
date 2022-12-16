@@ -30,7 +30,14 @@ end
 function C:position(i)
     local start_time = self.idx_nd:time(self.idx_nd.first_index)
     local clock_gap = self.idx_nd:time(i) - start_time
-    return self.buffer_start + clock_gap
+
+    local pos = self.buffer_start + clock_gap
+
+    while pos > self.buffer_end do
+        pos = pos - self.buffer_duration
+    end
+
+    return pos
 end
 
 -- Where the loop starts in the buffer.
