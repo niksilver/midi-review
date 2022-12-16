@@ -9,7 +9,7 @@ local C = {}
 -- @param buffer_duration    Duration of the loop in the buffer.
 -- @param idx_nd    Our `idx_ndata` structure with the MIDI note data.
 --
-function C.new(buffer_start, buffer_duration)
+function C.new(buffer_start, buffer_duration, idx_nd)
     local obj = {}
     setmetatable(obj, {__index = C})
 
@@ -20,6 +20,17 @@ function C.new(buffer_start, buffer_duration)
     obj.buffer_end = buffer_start + buffer_duration
 
     obj.idx_nd = idx_nd
+
+    return obj
+end
+
+-- Get the buffer position given the note data index.
+-- @param i    Index of the note data.
+--
+function C:position(i)
+    local start_time = self.idx_nd:time(self.idx_nd.first_index)
+    local clock_gap = self.idx_nd:time(i) - start_time
+    return self.buffer_start + clock_gap
 end
 
 -- Where the loop starts in the buffer.
