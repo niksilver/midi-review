@@ -87,4 +87,48 @@ end
 -- To do:
 -- - Can get first data correctly
 
+function test_indices_update_correctly()
+    local nd = idx_ndata.new(os.clock)
+
+    lu.assertEquals(nd:length(), 0)
+    lu.assertNil(nd.first_index)
+    lu.assertNil(nd.last_index)
+
+    -- Start appending items
+
+    nd:append({[21] = 101})
+    lu.assertEquals(nd:get(nd.first_index).note_vel, {[21] = 101})
+    lu.assertEquals(nd:get(nd.last_index).note_vel,  {[21] = 101})
+
+    nd:append({[22] = 102})
+    lu.assertEquals(nd:get(nd.first_index).note_vel, {[21] = 101})
+    lu.assertEquals(nd:get(nd.last_index).note_vel,  {[22] = 102})
+
+    nd:append({[23] = 103})
+    lu.assertEquals(nd:get(nd.first_index).note_vel, {[21] = 101})
+    lu.assertEquals(nd:get(nd.last_index).note_vel,  {[23] = 103})
+
+    nd:append({[24] = 104})
+    lu.assertEquals(nd:get(nd.first_index).note_vel, {[21] = 101})
+    lu.assertEquals(nd:get(nd.last_index).note_vel,  {[24] = 104})
+
+    -- Start deleting items
+
+    nd:delete_from_front()
+    lu.assertEquals(nd:get(nd.first_index).note_vel, {[22] = 102})
+    lu.assertEquals(nd:get(nd.last_index).note_vel,  {[24] = 104})
+
+    nd:delete_from_front()
+    lu.assertEquals(nd:get(nd.first_index).note_vel, {[23] = 103})
+    lu.assertEquals(nd:get(nd.last_index).note_vel,  {[24] = 104})
+
+    nd:delete_from_front()
+    lu.assertEquals(nd:get(nd.first_index).note_vel, {[24] = 104})
+    lu.assertEquals(nd:get(nd.last_index).note_vel,  {[24] = 104})
+
+    nd:delete_from_front()
+    lu.assertNil(nd.first_index)
+    lu.assertNil(nd.last_index)
+end
+
 os.exit(lu.LuaUnit.run())

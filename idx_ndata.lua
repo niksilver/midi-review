@@ -68,7 +68,13 @@ end
 --
 function C:delete_from_front()
     self.ndata[self.first_index] = nil
-    self.first_index = self.first_index + 1
+
+    if self.first_index == self.last_index then
+        self.first_index = nil
+        self.last_index = nil
+    else
+        self.first_index = self.first_index + 1
+    end
 end
 
 -- The function used to get the time when we append data.
@@ -79,5 +85,13 @@ C.timefn = nil
 -- The map from index to time/note_vel
 --
 C.ndata = {}
+
+-- Index of the first item in the sequence, or nil.
+--
+C.first_index = nil
+
+-- Index of the last item in the sequence, or nil.
+--
+C.last_index = nil
 
 return C
