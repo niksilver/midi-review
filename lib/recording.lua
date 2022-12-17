@@ -31,11 +31,11 @@ function C:position(i)
     local start_time = self.idx_nd.time1
     local clock_gap = self.idx_nd:time(i) - start_time
 
-    local pos = self.start_pos + clock_gap
+    -- The clock gap may be over the buffer duration any number of times,
+    -- so remove those "whole" gaps, ensuring the position is in the buffer.
 
-    while pos >= self.buffer_end do
-        pos = pos - self.buffer_duration
-    end
+    local whole_gaps = (clock_gap // self.buffer_duration) * self.buffer_duration
+    local pos = clock_gap - whole_gaps + self.start_pos
 
     return pos
 end
