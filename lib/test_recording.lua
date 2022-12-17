@@ -92,3 +92,57 @@ function test_cut_simple_case()
     lu.assertAlmostEquals(rec:position(2), 11.2, 0.001)
     lu.assertAlmostEquals(rec:position(3), 11.4, 0.001)
 end
+
+function test_cut_after_looping()
+    local idx_nd = idx_ndata.new(dummy_time)
+
+    -- Our recording loop runs from positions 10 to 12 in the buffer
+    local rec = recording.new(10, 2, idx_nd)
+
+    -- Put some dummy data into the note data sequence
+
+    idx_nd:append({}, 1000.0)    -- 1, position 10.0
+    idx_nd:append({}, 1000.3)
+    idx_nd:append({}, 1001.0)    -- 3, position 11.0
+    idx_nd:append({}, 1001.2)
+    idx_nd:append({}, 1001.4)    -- 5, position 11.4
+    idx_nd:append({}, 1002.1)    -- 6, position 10.1
+    idx_nd:append({}, 1003.8)    -- 7, position 11.8
+    idx_nd:append({}, 1004.0)    -- 8, position 10.0 - On the edge!
+    idx_nd:append({}, 1004.5)    -- 9, position 10.5
+
+    -- Delete items 1-7 and check things before cutting
+
+    for _ = 1, 7 do
+        idx_nd:delete_from_front()
+    end
+
+    lu.assertEquals(idx_nd:length(), 2)
+    lu.assertEquals(idx_nd.first_index, 8)
+    lu.assertEquals(idx_nd.last_index, 9)
+
+    lu.assertAlmostEquals(idx_nd:time(8), 1004.0, 0.001)
+    lu.assertAlmostEquals(idx_nd:time(9), 1004.5, 0.001)
+
+    lu.assertAlmostEquals(rec:position(8), 10.0, 0.001)
+    lu.assertAlmostEquals(rec:position(9), 10.5, 0.001)
+
+    -- Cut the buffer and check everything again
+
+    local offset = rec:cut()
+
+    lu.assertEquals(offset, 7)
+
+    lu.assertEquals(idx_nd:length(), 2)
+    lu.assertEquals(idx_nd.first_index, 1)
+    lu.assertEquals(idx_nd.last_index, 2)
+
+    lu.assertAlmostEquals(idx_nd:time(1), 1004.0, 0.001)
+    lu.assertAlmostEquals(idx_nd:time(2), 1004.5, 0.001)
+
+    lu.assertAlmostEquals(rec:position(1), 10.0, 0.001)
+    lu.assertAlmostEquals(rec:position(2), 10.5, 0.001)
+end
+
+-- To do:
+--   - Cut to the very end

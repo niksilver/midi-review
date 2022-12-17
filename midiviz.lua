@@ -132,10 +132,6 @@ function init()
     softcut.event_phase(function(i, pos)
         -- DEBUGGING
 
-        if state.mode == RECORD then
-            print("softcut.event_phase(): Recording, pos = " .. pos .. " (audio_position = " .. (audio_position or "NIL") .. ")")
-        end
-
         if audio_position and (pos < audio_position) then
             print("softcut.event_phase(): We have looped")
         end
@@ -157,8 +153,8 @@ function init()
 
             -- We're playing, so we may need to move our note number, or stop
 
-            local idx_pos = idx_audio_position(play.start_position, 1, nd_seq.last_index)
-            if idx == nd_seq.last_index or pos >= idx_pos then
+            local end_pos = idx_audio_position(record.start_position, 1, nd_seq.last_index)
+            if idx == nd_seq.last_index or pos >= end_pos then
                 -- We need to stop playing
 
                 idx = nd_seq.last_index
@@ -168,7 +164,7 @@ function init()
             end
 
             -- We may need to move our note number
-            while idx_audio_position(play.start_position, 1, idx+1) <= pos do
+            while idx_audio_position(record.start_position, 1, idx+1) <= pos do
                 idx = idx + 1
             end
 
@@ -203,17 +199,24 @@ function move_recording_window(pos)
     -- if so then we'll reduce it by one notch,
     -- and then we'll test again
 
+    local debug_mrw = function(pos)
+        print("move_recording_window(): index [" .. record.start_idx .. ", " .. idx ..
+            "] and position [" .. record.start_position .. ", " .. pos .. "]")
+    end
+
     local repeat_count = 0
 
     repeat
 
         if recording_duration(pos) <= state.window_duration then
             -- The window isn't big enough to roll
+            debug_mrw(pos)
             return
         end
 
         if not idx then
             -- We haven't recorded anything yet
+            debug_mrw(pos)
             return
         end
 
@@ -223,6 +226,7 @@ function move_recording_window(pos)
             init_note_data()
             stop_recording_audio()
             state.last_event = NO_EVENT
+            debug_mrw(pos)
             return
         end
 
@@ -237,8 +241,7 @@ function move_recording_window(pos)
 
         repeat_count = repeat_count + 1
 
-        print("move_recording_window(): [" .. record.start_idx .. ", " .. idx ..
-            "] and [" .. record.start_position .. ", " .. pos .. "]")
+        debug_mrw(pos)
     until repeat_count >= 100
     print("Likely error! 100 repeat counts!")
 end
@@ -267,8 +270,6 @@ function redraw()
         -- Draw the current notch. We must do this last to ensure it
         -- shows up over the other notches
         draw_notch(idx, 15)
-    else
-        print("No notches to draw")
     end
 
     -- If we're playing, draw our audio progress. It is a line drawn
@@ -740,6 +741,7 @@ function start_playing_audio()
     play.start_idx = idx
     play.start_position = audio_position
 
+    print("start_playing_audio(): Play from position " .. audio_position)
     softcut.position(SC_VOICE, audio_position)
     softcut.play(SC_VOICE, 1)    -- Start playing (1 = on)
 end

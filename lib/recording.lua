@@ -33,7 +33,7 @@ function C:position(i)
 
     local pos = self.start_pos + clock_gap
 
-    while pos > self.buffer_end do
+    while pos >= self.buffer_end do
         pos = pos - self.buffer_duration
     end
 
