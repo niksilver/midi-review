@@ -24,6 +24,9 @@ function C.new(fn)
     obj.first_index = nil
     obj.last_index = nil
 
+    -- Time at index 1
+    obj.time1 = nil
+
     return obj
 end
 
@@ -43,14 +46,17 @@ end
 --     time function from the constructor will be used.
 --
 function C:append(data, time)
+    local time_to_use = time or self:timefn()
+
     if self.last_index == nil then
         self.last_index = 1
+        self.time1 = time_to_use
     else
         self.last_index = self.last_index + 1
     end
 
     self.ndata[self.last_index] = {
-        time = time or self:timefn(),
+        time = time_to_use,
         note_vel = shallow_copy(data),
     }
 
@@ -98,6 +104,7 @@ function C:delete_from_front()
     if self.first_index == self.last_index then
         self.first_index = nil
         self.last_index = nil
+        self.time1 = nil
     else
         self.first_index = self.first_index + 1
     end
@@ -125,6 +132,7 @@ function C:reindex()
     self.ndata = ndata2
     self.first_index = 1
     self.last_index = self.last_index - offset
+    self.time1 = self:time(1)
 
     return offset
 end
@@ -145,5 +153,11 @@ C.first_index = nil
 -- Index of the last item in the sequence, or nil.
 --
 C.last_index = nil
+
+-- The time of the data at index 1 (or nil if there is none).
+-- This is useful if we cut delete from the front and haven't
+-- yet reindexed.
+--
+C.time1 = nil
 
 return C

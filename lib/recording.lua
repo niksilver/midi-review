@@ -13,11 +13,11 @@ function C.new(buffer_start, buffer_duration, idx_nd)
     local obj = {}
     setmetatable(obj, {__index = C})
 
-    obj.start_pos = nil    -- Position in the buffer of the start of our recording
-
     obj.buffer_start = buffer_start
     obj.buffer_duration = buffer_duration
     obj.buffer_end = buffer_start + buffer_duration
+
+    obj.start_pos = buffer_start    -- Buffer position of the start of our recording
 
     obj.idx_nd = idx_nd
 
@@ -28,16 +28,28 @@ end
 -- @param i    Index of the note data.
 --
 function C:position(i)
-    local start_time = self.idx_nd:time(self.idx_nd.first_index)
+    local start_time = self.idx_nd.time1
     local clock_gap = self.idx_nd:time(i) - start_time
 
-    local pos = self.buffer_start + clock_gap
+    local pos = self.start_pos + clock_gap
 
     while pos > self.buffer_end do
         pos = pos - self.buffer_duration
     end
 
     return pos
+end
+
+-- Cut the recording to start from wherever the note data starts from.
+-- The note data will be reindexed.
+-- @return    The offset from the reindex.
+--     Ie how many places the indices have moved back following the reindex.
+--
+function C:cut()
+    local pos = self:position(self.idx_nd.first_index)
+
+    self.start_pos = pos
+    return self.idx_nd:reindex()
 end
 
 -- Where the loop starts in the buffer.

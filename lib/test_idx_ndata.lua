@@ -1,6 +1,9 @@
 lu = require('luaunit')
-
 idx_ndata = require('idx_ndata')
+
+function dummy_time()
+    lu.fail("dummy_time() should not have been called")
+end
 
 function test_count_normally()
     local nd = idx_ndata.new(os.clock)
@@ -109,7 +112,7 @@ function test_can_delete_from_front()
     lu.assertEquals(nd:length(), 0)
 end
 
-function test_indices_update_correctly()
+function test_indices_update_correctly_as_we_append_and_delete()
     local nd = idx_ndata.new(os.clock)
 
     lu.assertEquals(nd:length(), 0)
@@ -153,6 +156,40 @@ function test_indices_update_correctly()
     lu.assertNil(nd.last_index)
 end
 
+function test_time1_as_we_append_and_delete()
+    local nd = idx_ndata.new(os.clock)
+
+    lu.assertNil(nd.time1)
+
+    -- Start appending items starting at clock time 1000.1
+
+    nd:append({}, 1000.1)
+    lu.assertAlmostEquals(nd.time1, 1000.1, 0.001)
+
+    nd:append({}, 1000.2)
+    lu.assertAlmostEquals(nd.time1, 1000.1, 0.001)
+
+    nd:append({}, 1000.5)
+    lu.assertAlmostEquals(nd.time1, 1000.1, 0.001)
+
+    nd:append({}, 1000.6)
+    lu.assertAlmostEquals(nd.time1, 1000.1, 0.001)
+
+    -- Start deleting items
+
+    nd:delete_from_front()
+    lu.assertAlmostEquals(nd.time1, 1000.1, 0.001)
+
+    nd:delete_from_front()
+    lu.assertAlmostEquals(nd.time1, 1000.1, 0.001)
+
+    nd:delete_from_front()
+    lu.assertAlmostEquals(nd.time1, 1000.1, 0.001)
+
+    nd:delete_from_front()
+    lu.assertNil(nd.time1)
+end
+
 function test_reindex()
     local nd = idx_ndata.new(os.clock)
 
@@ -191,4 +228,31 @@ function test_reindex_empty_sequence()
     lu.assertEquals(nd:length(), 0)
     lu.assertNil(nd.first_index)
     lu.assertNil(nd.last_index)
+end
+
+function test_time1_after_reindex()
+    local nd = idx_ndata.new(dummy_time)
+
+    lu.assertNil(nd.time1)
+
+    -- Append items starting at clock time 1000.1
+
+    nd:append({}, 1000.1)
+    nd:append({}, 1000.2)
+    nd:append({}, 1000.5)
+    nd:append({}, 1000.6)
+    lu.assertAlmostEquals(nd.time1, 1000.1, 0.001)
+
+    -- Delete a couple
+
+    nd:delete_from_front()
+    lu.assertAlmostEquals(nd.time1, 1000.1, 0.001)
+
+    nd:delete_from_front()
+    lu.assertAlmostEquals(nd.time1, 1000.1, 0.001)
+
+    -- Reindex and check time1 has updated
+
+    nd:reindex()
+    lu.assertAlmostEquals(nd.time1, 1000.5, 0.001)
 end
