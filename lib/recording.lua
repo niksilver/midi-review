@@ -44,9 +44,15 @@ end
 -- The note data will be reindexed.
 -- @return    The offset from the reindex.
 --     Ie how many places the indices have moved back following the reindex.
+--     Will be nil if there was no note data.
 --
 function C:cut()
-    local pos = self:position(self.idx_nd.first_index)
+    local first_index = self.idx_nd.first_index
+    if first_index == nil then
+        return nil
+    end
+
+    local pos = self:position(first_index)
 
     self.start_pos = pos
     return self.idx_nd:reindex()

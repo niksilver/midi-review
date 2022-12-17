@@ -144,5 +144,63 @@ function test_cut_after_looping()
     lu.assertAlmostEquals(rec:position(2), 10.5, 0.001)
 end
 
--- To do:
---   - Cut to the very end
+function test_cut_to_end()
+    local idx_nd = idx_ndata.new(dummy_time)
+
+    -- Our recording loop runs from positions 10 to 12 in the buffer
+    local rec = recording.new(10, 2, idx_nd)
+
+    -- Put some dummy data into the note data sequence
+
+    idx_nd:append({}, 1000.0)    -- 1, position 10.0
+    idx_nd:append({}, 1000.3)
+    idx_nd:append({}, 1001.0)    -- 3, position 11.0
+    idx_nd:append({}, 1001.2)
+
+    -- Delete all but one of the note data items and cut
+
+    idx_nd:delete_from_front()
+    idx_nd:delete_from_front()
+    idx_nd:delete_from_front()
+
+    local offset = rec:cut()
+
+    lu.assertEquals(offset, 3)
+
+    lu.assertEquals(idx_nd:length(), 1)
+    lu.assertEquals(idx_nd.first_index, 1)
+    lu.assertEquals(idx_nd.last_index, 1)
+
+    lu.assertAlmostEquals(idx_nd:time(1), 1001.2, 0.001)
+
+    lu.assertAlmostEquals(rec:position(1), 11.2, 0.001)
+end
+
+function test_cut_after_everything_deleted()
+    local idx_nd = idx_ndata.new(dummy_time)
+
+    -- Our recording loop runs from positions 10 to 12 in the buffer
+    local rec = recording.new(10, 2, idx_nd)
+
+    -- Put some dummy data into the note data sequence
+
+    idx_nd:append({}, 1000.0)    -- 1, position 10.0
+    idx_nd:append({}, 1000.3)
+    idx_nd:append({}, 1001.0)    -- 3, position 11.0
+    idx_nd:append({}, 1001.2)
+
+    -- Delete all the note data items and cut
+
+    idx_nd:delete_from_front()
+    idx_nd:delete_from_front()
+    idx_nd:delete_from_front()
+    idx_nd:delete_from_front()
+
+    local offset = rec:cut()
+
+    lu.assertNil(offset)
+
+    lu.assertEquals(idx_nd:length(), 0)
+    lu.assertNil(idx_nd.first_index)
+    lu.assertNil(idx_nd.last_index)
+end
