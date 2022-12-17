@@ -204,3 +204,53 @@ function test_cut_after_everything_deleted()
     lu.assertNil(idx_nd.first_index)
     lu.assertNil(idx_nd.last_index)
 end
+
+function test_duration()
+    local idx_nd = idx_ndata.new(dummy_time)
+
+    -- Our recording loop runs from positions 10 to 12 in the buffer
+    local rec = recording.new(10, 2, idx_nd)
+
+    -- Put some dummy data into the note data sequence
+
+    idx_nd:append({}, 1000.0)    -- 1, position 10.0
+    idx_nd:append({}, 1000.3)
+    idx_nd:append({}, 1001.0)    -- 3, position 11.0
+    idx_nd:append({}, 1001.2)
+    idx_nd:append({}, 1002.1)    -- 5, position 10.1
+    idx_nd:append({}, 1003.8)    -- 6, position 11.8
+
+    -- Duration from index 1, start position of the record head is 10.0
+
+    lu.assertAlmostEquals(rec:duration(10.0), 0.0, 0.001)
+    lu.assertAlmostEquals(rec:duration(10.5), 0.5, 0.001)
+    lu.assertAlmostEquals(rec:duration(11.2), 1.2, 0.001)
+
+    -- If we delete the first MIDI event, the start is position 10.3
+
+    idx_nd:delete_from_front()
+
+    lu.assertAlmostEquals(rec:duration(10.3), 0.0, 0.001)
+    lu.assertAlmostEquals(rec:duration(11.3), 1.0, 0.001)
+    lu.assertAlmostEquals(rec:duration(11.5), 1.2, 0.001)
+
+    -- If we delete the next MIDI event, the start is position 11.0,
+    -- and we should consider if the record head has looped.
+
+    idx_nd:delete_from_front()
+
+    lu.assertAlmostEquals(rec:duration(11.0), 0.0, 0.001)
+    lu.assertAlmostEquals(rec:duration(11.5), 0.5, 0.001)
+    lu.assertAlmostEquals(rec:duration(10.0), 1.0, 0.001)    -- Looped
+    lu.assertAlmostEquals(rec:duration(10.5), 1.5, 0.001)    -- Looped
+
+    -- Delete all but the last two events, the start position is 10.1.
+    -- (We'll test against 10.100001 to avoid precision issues.
+
+    idx_nd:delete_from_front()
+    idx_nd:delete_from_front()
+
+    lu.assertAlmostEquals(rec:duration(10.100001), 0.0, 0.001)
+    lu.assertAlmostEquals(rec:duration(11.3), 1.2, 0.001)
+    lu.assertAlmostEquals(rec:duration(10.0), 1.9, 0.001)    -- Looped
+end

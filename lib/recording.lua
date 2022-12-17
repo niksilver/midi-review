@@ -40,6 +40,22 @@ function C:position(i)
     return pos
 end
 
+-- Calculate the duration of the recording from the first MIDI note data
+-- to the given position.
+-- @param pos    The position in the buffer of the end of the period
+--
+function C:duration(pos)
+    local start_pos = self:position(self.idx_nd.first_index)
+
+    -- We may have an easy calculation
+    if start_pos <= pos then
+        return pos - start_pos
+    end
+
+    -- We've looped round the buffer loop, so it's more complicated
+    return pos - start_pos + self.buffer_duration
+end
+
 -- Cut the recording to start from wherever the note data starts from.
 -- The note data will be reindexed.
 -- @return    The offset from the reindex.
