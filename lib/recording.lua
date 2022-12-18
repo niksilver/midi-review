@@ -43,12 +43,12 @@ end
 -- Calculate the duration of the recording from the first MIDI note data
 -- to the given position.
 -- @param pos    The position in the buffer of the end of the period
--- @return    Duration of the recording in seconds, or nil if there is
+-- @return    Duration of the recording in seconds, or 0 if there is
 --     nothing recorded.
 --
 function C:duration(pos)
     if self.idx_nd.first_index == nil then
-        return nil
+        return 0
     end
 
     local start_pos = self:position(self.idx_nd.first_index)

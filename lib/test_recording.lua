@@ -211,8 +211,8 @@ function test_duration()
     -- Our recording loop runs from positions 10 to 12 in the buffer
     local rec = recording.new(10, 2, idx_nd)
 
-    lu.assertNil(rec:duration(10.0))
-    lu.assertNil(rec:duration(10.5))
+    lu.assertEquals(rec:duration(10.0), 0)
+    lu.assertEquals(rec:duration(10.5), 0)
 
     -- Put some dummy data into the note data sequence
 
@@ -257,12 +257,20 @@ function test_duration()
     lu.assertAlmostEquals(rec:duration(11.3), 1.2, 0.001)
     lu.assertAlmostEquals(rec:duration(10.0), 1.9, 0.001)    -- Looped
 
-    -- Delete the last two events and we should get nil duration
+    -- Leave only one event, with start position 11.8
 
     idx_nd:delete_from_front()
+
+    lu.assertAlmostEquals(rec:duration(11.800001), 0.0, 0.001)
+    lu.assertAlmostEquals(rec:duration(11.9), 0.1, 0.001)
+    lu.assertAlmostEquals(rec:duration(10.0), 0.2, 0.001)    -- Looped
+    lu.assertAlmostEquals(rec:duration(10.1), 0.3, 0.001)    -- Looped
+
+    -- Delete the last event and we should get zero duration
+
     idx_nd:delete_from_front()
 
-    lu.assertNil(rec:duration(10.0))
-    lu.assertNil(rec:duration(10.1))
-    lu.assertNil(rec:duration(10.0))
+    lu.assertEquals(rec:duration(10.0), 0)
+    lu.assertEquals(rec:duration(10.1), 0)
+    lu.assertEquals(rec:duration(99.0), 0)    -- Silly, but should stil return 0
 end
