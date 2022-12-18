@@ -6,9 +6,6 @@
 -- k2 long press = record
 -- e2 = scroll through time
 
--- To do:
---   - Do we still need record.start_index?
-
 musicutil = require('musicutil')
 idx_ndata = include('lib/idx_ndata')
 Recording = include('lib/recording')
@@ -25,12 +22,7 @@ end
 init_note_data()
 
 -- The recording voice (head) and buffer for softcut.
--- The start and end of the buffer, because if we're not on
--- a rolling record window then we need to stop recording at the end.
--- Our play/record data.
--- The play.start_idx relates to the MIDI data, not the audio,
--- but we keep it with the audio because it's only used when
--- we draw the audio play line.
+-- The start and end of the buffer.
 
 SC_VOICE = 1
 SC_BUFFER = 1
@@ -38,7 +30,9 @@ SC_BUFFER_START = 1
 SC_BUFFER_DURATION = 5    -- Seconds
 SC_BUFFER_END = SC_BUFFER_START + SC_BUFFER_DURATION
 
-audio_position = nil    -- Voice position, when playing and recording
+-- Voice position, when playing and recording
+
+audio_position = nil
 
 -- The audio recording, linked to the note data sequence.
 -- Once we reinitialise the note data sequence then we need to call this
@@ -50,18 +44,14 @@ function init_recording()
 end
 init_recording()
 
---[[record = {
-    start_position = nil,    -- Position of the start of our recording
-    start_idx = nil,    -- Index of where our MIDI recording data starts
-                        -- (it may move forward as our rolling window moves).
-}--]]
+-- Index we've started playing from
 
-play = {
-    start_position = nil,
-    -- start_idx = nil,
-}
+play_start_idx = nil
 
-SC_UPDATE_FREQ = 1/20    -- Screen update frequency from audio playing (seconds)
+-- Update frequency to track the voice position in softcut
+-- and update the screen and more.
+
+SC_UPDATE_FREQ = 1/20
 
 -- Current key/screen state, including
 -- when k2 was pressed down (for long press);
@@ -92,10 +82,6 @@ state = {
 }
 
 LONG_PRESS_SECS = 0.5  -- Length of a long press, in seconds
-
--- The metronome for playing back note data; nil means stopped.
-
--- ndata_player = nil
 
 -- Our MIDI device
 
@@ -141,14 +127,6 @@ function init()
     softcut.phase_quant(SC_VOICE, SC_UPDATE_FREQ)
     last_position = null
     softcut.event_phase(function(i, pos)
---[[        -- DEBUGGING
-
-        if audio_position and (pos < audio_position) then
-            print("softcut.event_phase(): We have looped")
-        end
-        if pos > SC_BUFFER_END then
-            print("softcut.event_phase(): More than a second beyond the buffer! " .. position)
-        end--]]
 
         if state.mode == STOP then
             return
@@ -164,7 +142,6 @@ function init()
 
             -- We're playing, so we may need to move our note number, or stop
 
-            -- local end_pos = idx_audio_position(record.start_position, 1, nd_seq.last_index)
             local end_pos = record:position(nd_seq.last_index)
             if idx == nd_seq.last_index or pos >= end_pos then
                 -- We need to stop playing
@@ -176,7 +153,6 @@ function init()
             end
 
             -- We may need to move our note number
-            -- while idx_audio_position(record.start_position, 1, idx+1) <= pos do
             while need_to_move_idx(pos) do
                 idx = idx + 1
             end
@@ -212,21 +188,7 @@ function need_to_move_idx(pos)
 
     return next_idx_pos <= pos or pos < idx_pos
 
-    
 end
-
--- Calculate the current duration of the recording.
--- @param pos    Our current position in the buffer.
---
---[[function recording_duration(pos)
-    -- We may have an easy calculation
-    if record.start_position <= pos then
-        return pos - record.start_position
-    end
-
-    -- We've looped round the buffer loop, so it's more complicated
-    return (pos - SC_BUFFER_START) + (SC_BUFFER_END - record.start_position)
-end--]]
 
 -- If necessary, move the recording window, for when we've recorded
 -- more than the rolling window allows.
@@ -247,56 +209,6 @@ function maintain_recording_window(pos)
             return
         end
     end
-
---[[    -- We'll see if we need to reduce the window,
-    -- if so then we'll reduce it by one notch,
-    -- and then we'll test again
-
-    local debug_mrw = function(pos)
-        print("move_recording_window(): index [" .. record.start_idx .. ", " .. idx ..
-            "] and position [" .. record.start_position .. ", " .. pos .. "]")
-    end
-
-    local repeat_count = 0
-
-    repeat
-
-        if recording_duration(pos) <= state.window_duration then
-            -- The window isn't big enough to roll
-            debug_mrw(pos)
-            return
-        end
-
-        if not idx then
-            -- We haven't recorded anything yet
-            debug_mrw(pos)
-            return
-        end
-
-        if nd_seq:length() == 1 then
-            -- We've only recorded one set of MIDI events and it's outside
-            -- our rolling window, so re-arm the recording.
-            init_note_data()
-            stop_recording_audio()
-            state.last_event = NO_EVENT
-            debug_mrw(pos)
-            return
-        end
-
-        -- We have at least two MIDI events.
-        -- Move our record start index forward as necessary
-
-        record.start_position = idx_audio_position(record.start_position, record.start_idx, record.start_idx+1)
-        -- idx_ndata[record.start_idx] = nil
-        -- record.start_idx = record.start_idx + 1
-        nd_seq:delete_from_front()
-        record.start_idx = nd_seq.first_index
-
-        repeat_count = repeat_count + 1
-
-        debug_mrw(pos)
-    until repeat_count >= 100
-    print("Likely error! 100 repeat counts!")--]]
 end
 
 -- (Re)draw the screen
@@ -315,7 +227,6 @@ function redraw()
 
     if idx then
         -- Draw the notches on the timeline
-        -- for i, _ in pairs(idx_ndata) do
         for i = nd_seq.first_index, nd_seq.last_index do
             draw_notch(i, 2)
         end
@@ -332,11 +243,8 @@ function redraw()
         local start_x = timeline_x(idx)
         local current_length = 1
 
-        -- if idx < #idx_ndata then
         if idx < nd_seq.last_index then
-            -- local full_time = idx_ndata[idx+1].time - idx_ndata[idx].time
             local full_time = nd_seq:time(idx+1) - nd_seq:time(idx)
-            -- local idx_pos = idx_audio_position(play.start_position, play.start_idx, idx)
             local idx_pos = record:position(idx)
             local current_time = audio_position - idx_pos
             local full_length = timeline_x(idx+1) - start_x
@@ -344,7 +252,7 @@ function redraw()
         end
 
         screen.level(2)
-        screen.move(timeline_x(play.start_idx), AUDIO_PLAY_Y)
+        screen.move(timeline_x(play_start_idx), AUDIO_PLAY_Y)
         screen.line(start_x, AUDIO_PLAY_Y)
         screen.stroke()
 
@@ -372,7 +280,6 @@ function redraw()
         -- We've just had some event, so work out what data we need to display
 
         local data =
-            -- state.last_event == NOTE_EVENT and note_vel or idx_ndata[idx].note_vel
             state.last_event == NOTE_EVENT and note_vel or nd_seq:note_vel(idx)
         local notes = {}
 
@@ -543,7 +450,6 @@ midi_device.event = function(data)
 
     if msg.type == "note_on" or msg.type == "note_off" then
         if state.mode == RECORD then
-            -- append_ndata()
             nd_seq:append(note_vel)
             idx = nd_seq.last_index
         end
@@ -558,18 +464,6 @@ midi_device.event = function(data)
     end
     redraw()
 end
-
--- Add note data (the note_val table) to the end of our current history.
---
---[[function append_ndata()
-    local seconds = util.time()
-
-    idx = #idx_ndata + 1
-    idx_ndata[idx] = {
-        time = seconds,
-        note_vel = shallow_copy(note_vel)
-    }
-end--]]
 
 -- Draw a notch on the timeline
 -- @param i    Which notch idx
@@ -595,9 +489,7 @@ function timeline_x(i)
     end
 
     -- Get the time difference from first to last note
-    -- local time_first = idx_ndata[start_idx].time
     local time_first = nd_seq:time(start_idx)
-    -- local time_last = idx_ndata[#idx_ndata].time
     local time_last = nd_seq:time(nd_seq.last_index)
     local time_diff = time_last - time_first
 
@@ -625,7 +517,6 @@ function key(n, z)
                 -- Go into record mode.
                 -- We don't start writing audio and MIDI data here;
                 -- we start when we get the first MIDI note.
-                print("key(): Going into record mode")
 
                 init_note_data()
                 stop_recording_audio()
@@ -635,11 +526,9 @@ function key(n, z)
                 state.mode = RECORD
 
             elseif state.mode == STOP then
-                print("key(): Maybe going into play mode")
                 -- Short press - go into play mode if we can
 
                 if nd_seq.first_index then
-                    print("key(): Going into play mode")
                     stop_recording_audio()
 
                     state.mode = PLAY
@@ -648,12 +537,10 @@ function key(n, z)
             else
                 -- Short press - go into stop mode
 
-                print("key(): Going into stop mode")
                 to_stop_mode()
             end
 
             state.k2_down = nil
-            print("key(): idx = " .. (idx or "nil"))
             redraw()
         end
     end
@@ -671,12 +558,8 @@ function to_stop_mode()
 
     if state.mode == RECORD and idx then
         note_vel = {}
-        -- append_ndata()
         nd_seq:append(note_vel)
 
---[[        -- The rolling record window might have shifted the start of
-        -- the note data, so we may need to move it down.
-        -- reindex_note_data()--]]
         --  Cut the recording to the start
         record:cut()
         idx = nd_seq.last_index
@@ -688,42 +571,13 @@ function to_stop_mode()
     state.mode = STOP
 end
 
--- The start of the note data might not be 1. If so, copy it
--- all back to the 1 index.
--- This assumes we were recording and are moving into stop mode.
---
---[[function reindex_note_data()
-    if record.start_idx == nil or record.start_idx == 1 then
-        return
-    end
-
-    local offset = record.start_idx - 1
-    local idx_ndata2 = {}
-
-    for i, d in pairs(idx_ndata) do
-        local dst = i - offset
-        idx_ndata2[i - offset] = {
-            time = d.time,
-            note_vel = shallow_copy(d.note_vel)
-        }
-    end
-
-    idx = idx - offset
-    idx_ndata = idx_ndata2
-
-    local offset = nd_seq:reindex()
-    idx = idx - offset
-end--]]
-
 -- Encoders:
 -- e2 = scroll back and forth through our notes
 -- If we're playing then we need to restart that.
 --
 function enc(n, d)
     if n == 2 then
-        -- if #idx_ndata > 0 then
         if nd_seq:length() > 0 then
-            -- idx = util.clamp(idx + d, 1, #idx_ndata)
             idx = util.clamp(idx + d, nd_seq.first_index, nd_seq.last_index)
             state.last_event = TRANSPORT_EVENT
         end
@@ -784,8 +638,7 @@ end
 function stop_playing_audio()
     softcut.play(SC_VOICE, 0)    -- Stop playing (0 = off)
     audio_position = nil
-    play.start_idx = nil
-    play.start_position = nil
+    play_start_idx = nil
 end
 
 -- Start playing audio from the point of where we are in the note data.
@@ -798,40 +651,8 @@ function start_playing_audio()
         audio_position = record:position(idx)
     end
 
-    play.start_idx = idx
-    play.start_position = audio_position
+    play_start_idx = idx
 
-    print("start_playing_audio(): Play from position " .. audio_position)
     softcut.position(SC_VOICE, audio_position)
     softcut.play(SC_VOICE, 1)    -- Start playing (1 = on)
 end
-
--- The softcut audio position of note number i.
--- @param start_position    Softcut voice position of the audio start
--- @param start_i    The index of the start of audio
--- @param i    Index of the note number we want
---
---[[function idx_audio_position(start_position, start_i, i)
-    if i == nil then
-        print("idx_audio_position(): Error! Wrong parameters!")
-    end
-
-    -- local i_time = idx_ndata[i].time
-    local i_time = nd_seq:time(i)
-    -- local start_i_time = idx_ndata[start_i].time
-    local start_i_time = nd_seq:time(start_i)
-
-    local duration = i_time - start_i_time
-    local end_position = start_position + duration
-    local duration_beyond = end_position - SC_BUFFER_END
-
-    if duration_beyond <= 0 then
-        return end_position
-    end
-
-    if SC_BUFFER_START + duration_beyond > SC_BUFFER_END then
-        print("idx_audio_position(): Error! Audio position is far beyond!")
-    end
-
-    return SC_BUFFER_START + duration_beyond
-end--]]
