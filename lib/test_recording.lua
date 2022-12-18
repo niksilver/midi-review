@@ -144,6 +144,63 @@ function test_cut_after_looping()
     lu.assertAlmostEquals(rec:position(2), 10.5, 0.001)
 end
 
+function test_position_with_looping_after_cut()
+    local idx_nd = idx_ndata.new(dummy_time)
+
+    -- Our recording loop runs from positions 10 to 12 in the buffer
+    local rec = recording.new(10, 2, idx_nd)
+
+    -- Put some dummy data into the note data sequence
+
+    idx_nd:append({}, 1000.0)    -- 1, position 10.0
+    idx_nd:append({}, 1000.3)
+    idx_nd:append({}, 1001.0)    -- 3, position 11.0
+    idx_nd:append({}, 1001.2)
+    idx_nd:append({}, 1001.4)    -- 5, position 11.4
+    idx_nd:append({}, 1002.1)    -- 6, position 10.1
+    idx_nd:append({}, 1003.8)    -- 7, position 11.8
+    idx_nd:append({}, 1004.0)    -- 8, position 10.0 - On the edge!
+    idx_nd:append({}, 1004.5)    -- 9, position 10.5
+
+    -- Check all the positions when nothing's happened
+
+    lu.assertAlmostEquals(rec:position(1), 10.0, 0.001)
+    lu.assertAlmostEquals(rec:position(2), 10.3, 0.001)
+    lu.assertAlmostEquals(rec:position(3), 11.0, 0.001)
+    lu.assertAlmostEquals(rec:position(4), 11.2, 0.001)
+    lu.assertAlmostEquals(rec:position(5), 11.4, 0.001)
+    lu.assertAlmostEquals(rec:position(6), 10.1, 0.001)
+    lu.assertAlmostEquals(rec:position(7), 11.8, 0.001)
+    lu.assertAlmostEquals(rec:position(8), 10.0, 0.001)
+    lu.assertAlmostEquals(rec:position(9), 10.5, 0.001)
+
+    -- Delete one, check. The indices won't change
+
+    idx_nd:delete_from_front()
+
+    lu.assertAlmostEquals(rec:position(2), 10.3, 0.001)
+    lu.assertAlmostEquals(rec:position(3), 11.0, 0.001)
+    lu.assertAlmostEquals(rec:position(4), 11.2, 0.001)
+    lu.assertAlmostEquals(rec:position(5), 11.4, 0.001)
+    lu.assertAlmostEquals(rec:position(6), 10.1, 0.001)
+    lu.assertAlmostEquals(rec:position(7), 11.8, 0.001)
+    lu.assertAlmostEquals(rec:position(8), 10.0, 0.001)
+    lu.assertAlmostEquals(rec:position(9), 10.5, 0.001)
+
+    -- Cut, check. The indices will change
+
+    rec:cut()
+
+    lu.assertAlmostEquals(rec:position(1), 10.3, 0.001)
+    lu.assertAlmostEquals(rec:position(2), 11.0, 0.001)
+    lu.assertAlmostEquals(rec:position(3), 11.2, 0.001)
+    lu.assertAlmostEquals(rec:position(4), 11.4, 0.001)
+    lu.assertAlmostEquals(rec:position(5), 10.1, 0.001)
+    lu.assertAlmostEquals(rec:position(6), 11.8, 0.001)
+    lu.assertAlmostEquals(rec:position(7), 10.0, 0.001)
+    lu.assertAlmostEquals(rec:position(8), 10.5, 0.001)
+end
+
 function test_cut_to_end()
     local idx_nd = idx_ndata.new(dummy_time)
 

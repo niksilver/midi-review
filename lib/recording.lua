@@ -28,14 +28,23 @@ end
 -- @param i    Index of the note data.
 --
 function C:position(i)
+    -- Time the recording starts
     local start_time = self.idx_nd.time1
+
+    -- Duration from recording start to note data i
     local clock_gap = self.idx_nd:time(i) - start_time
 
-    -- The clock gap may be over the buffer duration any number of times,
+    -- Position of note data i, but not accounting for possible looping
+    local pos_unlooped = self.start_pos + clock_gap
+
+    -- Duration of note data i from the start of the buffer
+    local gap_unlooped = pos_unlooped - self.buffer_start
+
+    -- This gap may be over the buffer duration any number of times,
     -- so remove those "whole" gaps, ensuring the position is in the buffer.
 
-    local whole_gaps = (clock_gap // self.buffer_duration) * self.buffer_duration
-    local pos = clock_gap - whole_gaps + self.start_pos
+    local whole_gaps = (gap_unlooped // self.buffer_duration) * self.buffer_duration
+    local pos = self.buffer_start + gap_unlooped - whole_gaps
 
     return pos
 end
