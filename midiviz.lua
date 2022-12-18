@@ -141,14 +141,14 @@ function init()
     softcut.phase_quant(SC_VOICE, SC_UPDATE_FREQ)
     last_position = null
     softcut.event_phase(function(i, pos)
-        -- DEBUGGING
+--[[        -- DEBUGGING
 
         if audio_position and (pos < audio_position) then
             print("softcut.event_phase(): We have looped")
         end
         if pos > SC_BUFFER_END then
             print("softcut.event_phase(): More than a second beyond the buffer! " .. position)
-        end
+        end--]]
 
         if state.mode == STOP then
             return
@@ -177,7 +177,7 @@ function init()
 
             -- We may need to move our note number
             -- while idx_audio_position(record.start_position, 1, idx+1) <= pos do
-            while record:position(idx+1) <= pos do
+            while need_to_move_idx(pos) do
                 idx = idx + 1
             end
 
@@ -188,6 +188,31 @@ function init()
     end)
     softcut.poll_start_phase()
 
+end
+
+-- Do we need to move `idx` given our new audio position?
+-- @param pos    Our new audio position
+--
+function need_to_move_idx(pos)
+    local idx_pos = record:position(idx)
+    local next_idx_pos = record:position(idx+1)
+
+    -- Consider two cases separately:
+    -- where the audio from idx to idx+1 hasn't looped; and
+    -- where the audio from idx to idx+1 has looped.
+
+    if idx_pos < next_idx_pos then
+        -- There's no loop
+        return pos >= next_idx_pos
+    end
+
+    -- There is a loop from idx to idx+1.
+    -- The position of idx+1 [A] is less than the position of idx [B],
+    -- so we need to move idx if our position is between [A] and [B].
+
+    return next_idx_pos <= pos or pos < idx_pos
+
+    
 end
 
 -- Calculate the current duration of the recording.
@@ -297,7 +322,6 @@ function redraw()
 
         -- Draw the current notch. We must do this last to ensure it
         -- shows up over the other notches
-        print("redraw(): Drawing current notch, idx = " .. idx)
         draw_notch(idx, 15)
     end
 
