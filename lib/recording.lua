@@ -161,6 +161,38 @@ function C:cut()
     return self.idx_nd:reindex()
 end
 
+-- From the period from note data at i to note data of i+1, return the
+-- relative time of position pos.
+-- For example, note data i is at position 101.0 and i+1 is at position 105.0
+-- then pos 101.0 is at relative time 0 (right at the start),
+-- pos 105.0 is at relative time 1.0 (right at the end),
+-- and pos 103.0 is at relative time 0.5 (half way between).
+-- Assumes pos is between i and i+1, otherwise the result may be wrong
+-- @param i    Index of the note data at the start of the period.
+-- @param pos    Position for which we want the answer.
+--
+function C:relative_time(i, pos)
+    local i_pos = self:position(i)
+    local j_pos = self:position(i+1)
+
+    if i_pos < j_pos then
+        -- i and i+1 don't loop
+        return (pos - i_pos) / (j_pos - i_pos)
+    end
+
+    -- We have a loop; we'll rework the numbers as if the buffer
+    -- just continued, and didn't loop
+
+    if j_pos < i_pos then
+        j_pos = self.buffer_end + (j_pos - self.buffer_start)
+    end
+    if pos < i_pos then
+        pos = self.buffer_end + (pos - self.buffer_start)
+    end
+
+    return (pos - i_pos) / (j_pos - i_pos)
+end
+
 -- Where the loop starts in the buffer.
 --
 C.buffer_start = nil

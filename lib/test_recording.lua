@@ -536,3 +536,44 @@ function test_beyond_end_with_loop()
     lu.assertEquals(rec:beyond_end(12.5), false)
 end
 
+function test_relative_time()
+    local idx_nd = idx_ndata.new(dummy_time)
+
+    -- Our recording loop runs from positions 10 to 12 in the buffer
+    local rec = recording.new(10, 2, idx_nd)
+
+    -- Put some dummy data into the note data sequence
+
+    idx_nd:append({}, 1000.0)
+    idx_nd:append({}, 1000.3)
+    idx_nd:append({}, 1000.7)    -- 1, position 10.7 after cutting
+    idx_nd:append({}, 1001.1)    -- 2, position 11.1
+    idx_nd:append({}, 1001.8)    -- 3, position 11.8
+    idx_nd:append({}, 1002.2)    -- 4, position 10.2
+
+    idx_nd:delete_from_front()
+    idx_nd:delete_from_front()
+    rec:cut()
+
+    -- Recording now runs from positions 10.7 to 10.2
+
+    -- Test the relative time of certain positions which don't loop
+
+    lu.assertAlmostEquals(rec:relative_time(1, 10.7), 0.00, 0.001)
+    lu.assertAlmostEquals(rec:relative_time(1, 10.8), 0.25, 0.001)
+    lu.assertAlmostEquals(rec:relative_time(1, 11.1), 1.00, 0.001)
+
+    lu.assertAlmostEquals(rec:relative_time(2, 11.1), 0.0, 0.001)
+    lu.assertAlmostEquals(rec:relative_time(2, 11.2), 1/7, 0.001)
+    lu.assertAlmostEquals(rec:relative_time(2, 11.5), 4/7, 0.001)
+    lu.assertAlmostEquals(rec:relative_time(2, 11.8), 1.0, 0.001)
+
+    -- This now involves a loop
+
+    lu.assertAlmostEquals(rec:relative_time(3, 11.8), 0.00, 0.001)
+    lu.assertAlmostEquals(rec:relative_time(3, 11.9), 0.25, 0.001)
+    lu.assertAlmostEquals(rec:relative_time(3, 12.0), 0.50, 0.001)
+    lu.assertAlmostEquals(rec:relative_time(3, 10.0), 0.50, 0.001)
+    lu.assertAlmostEquals(rec:relative_time(3, 10.1), 0.75, 0.001)
+    lu.assertAlmostEquals(rec:relative_time(3, 10.2), 1.00, 0.001)
+end
