@@ -331,3 +331,122 @@ function test_duration()
     lu.assertEquals(rec:duration(10.1), 0)
     lu.assertEquals(rec:duration(99.0), 0)    -- Silly, but should stil return 0
 end
+
+function test_position_at_or_beyond_no_looping()
+    local idx_nd = idx_ndata.new(dummy_time)
+
+    -- Our recording loop runs from positions 10 to 12 in the buffer
+    local rec = recording.new(10, 2, idx_nd)
+
+    -- Put some dummy data into the note data sequence
+
+    idx_nd:append({}, 1000.0)    -- 1, position 10.0
+    idx_nd:append({}, 1000.3)    -- 2, position 10.3
+    idx_nd:append({}, 1000.7)    -- 3, position 10.7
+    idx_nd:append({}, 1001.0)    -- 4, position 11.0
+
+    -- Test various positions against the indices
+
+    lu.assertEquals(rec:position_at_or_beyond(10.0, 1), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.0, 2), false)
+    lu.assertEquals(rec:position_at_or_beyond(10.0, 3), false)
+
+    lu.assertEquals(rec:position_at_or_beyond(10.1, 1), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.1, 2), false)
+    lu.assertEquals(rec:position_at_or_beyond(10.1, 3), false)
+
+    lu.assertEquals(rec:position_at_or_beyond(10.3, 1), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.3, 2), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.3, 3), false)
+
+    lu.assertEquals(rec:position_at_or_beyond(10.4, 1), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.4, 2), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.4, 3), false)
+
+    -- Delete the first note data and test again
+
+    idx_nd:delete_from_front()
+
+    lu.assertEquals(rec:position_at_or_beyond(10.3, 2), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.3, 3), false)
+    lu.assertEquals(rec:position_at_or_beyond(10.3, 4), false)
+
+    lu.assertEquals(rec:position_at_or_beyond(10.4, 2), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.4, 3), false)
+    lu.assertEquals(rec:position_at_or_beyond(10.4, 4), false)
+
+    lu.assertEquals(rec:position_at_or_beyond(10.8, 2), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.8, 3), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.8, 4), false)
+
+    lu.assertEquals(rec:position_at_or_beyond(10.8, 2), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.8, 3), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.8, 4), false)
+end
+
+function test_position_at_or_beyond_with_looping()
+    local idx_nd = idx_ndata.new(dummy_time)
+
+    -- Our recording loop runs from positions 10 to 12 in the buffer
+    local rec = recording.new(10, 2, idx_nd)
+
+    -- Put some dummy data into the note data sequence
+
+    idx_nd:append({}, 1000.0)
+    idx_nd:append({}, 1000.3)
+    idx_nd:append({}, 1000.7)
+    idx_nd:append({}, 1001.0)    -- 1, position 11.0 (after delete and cut)
+    idx_nd:append({}, 1001.3)    -- 2, position 11.3
+    idx_nd:append({}, 1002.1)    -- 3, position 10.1
+    idx_nd:append({}, 1002.3)    -- 4, position 10.3
+
+    idx_nd:delete_from_front()
+    idx_nd:delete_from_front()
+    idx_nd:delete_from_front()
+    rec:cut()
+
+    -- Now the recording runs from position 11.0 round to 10.3
+
+    -- Due to precision errors we may find that the MIDI event at
+    -- (say) clock time 1002.1 is not exactly at position 10.1.
+    -- This causes our tests to fail unexpectedly.
+    -- To avoid that we'll set up some variables which represent
+    -- the actual position of various clock times which are at
+    -- particular MIDI events.
+
+    local p_11_0 = rec:position(1)    -- Represents position 11.0
+    local p_10_1 = rec:position(3)    -- Represents position 10.1
+    local p_10_3 = rec:position(4)
+
+    -- Test various positions against the indices
+
+    lu.assertEquals(rec:position_at_or_beyond(p_11_0, 1), true)
+    lu.assertEquals(rec:position_at_or_beyond(p_11_0, 2), false)
+    lu.assertEquals(rec:position_at_or_beyond(p_11_0, 3), false)
+    lu.assertEquals(rec:position_at_or_beyond(p_11_0, 4), false)
+
+    lu.assertEquals(rec:position_at_or_beyond(11.2, 1), true)
+    lu.assertEquals(rec:position_at_or_beyond(11.2, 2), false)
+    lu.assertEquals(rec:position_at_or_beyond(11.2, 3), false)
+    lu.assertEquals(rec:position_at_or_beyond(11.2, 4), false)
+
+    lu.assertEquals(rec:position_at_or_beyond(11.4, 1), true)
+    lu.assertEquals(rec:position_at_or_beyond(11.4, 2), true)
+    lu.assertEquals(rec:position_at_or_beyond(11.4, 3), false)
+    lu.assertEquals(rec:position_at_or_beyond(11.4, 4), false)
+
+    lu.assertEquals(rec:position_at_or_beyond(10.0, 1), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.0, 2), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.0, 3), false)
+    lu.assertEquals(rec:position_at_or_beyond(10.0, 4), false)
+
+    lu.assertEquals(rec:position_at_or_beyond(p_10_1, 1), true)
+    lu.assertEquals(rec:position_at_or_beyond(p_10_1, 2), true)
+    lu.assertEquals(rec:position_at_or_beyond(p_10_1, 3), true)
+    lu.assertEquals(rec:position_at_or_beyond(p_10_1, 4), false)
+
+    lu.assertEquals(rec:position_at_or_beyond(10.2, 1), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.2, 2), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.2, 3), true)
+    lu.assertEquals(rec:position_at_or_beyond(10.2, 4), false)
+end

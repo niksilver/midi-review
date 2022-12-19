@@ -49,6 +49,31 @@ function C:position(i)
     return pos
 end
 
+-- Is the given position at or after a given index?
+-- @param pos   The position we want to test.
+-- @param i  The index we want to test the position against.
+--
+function C:position_at_or_beyond(pos, i)
+    local start_pos = self:position(self.idx_nd.first_index)
+    local end_pos = self:position(self.idx_nd.last_index)
+    local i_pos = self:position(i)
+
+    if start_pos < end_pos then
+        -- Not a loop
+        return pos >= i_pos
+    end
+
+    -- There is a loop
+
+    -- If pos is in the upper end of the buffer (earlier in recording)...
+    if start_pos <= pos then
+        return start_pos <= i_pos and i_pos <= pos
+    end
+
+    -- pos is in the lower end of the buffer (later in the recording)
+    return start_pos <= i_pos or i_pos <= pos
+end
+
 -- Calculate the duration of the recording from the first MIDI note data
 -- to the given position.
 -- @param pos    The position in the buffer of the end of the period
