@@ -248,11 +248,9 @@ function redraw()
         local current_length = 1
 
         if idx < nd_seq.last_index then
-            local full_time = nd_seq:time(idx+1) - nd_seq:time(idx)
-            local idx_pos = record:position(idx)
-            local current_time = audio_position - idx_pos
+            local proportion = record:relative_time(idx, audio_position)
             local full_length = timeline_x(idx+1) - start_x
-            current_length = math.max(1, full_length * current_time / full_time)
+            current_length = math.max(1, full_length * proportion)
         end
 
         screen.level(2)
