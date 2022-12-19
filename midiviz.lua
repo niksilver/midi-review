@@ -122,7 +122,7 @@ function init()
     softcut.pre_level(SC_VOICE, 0.0)    -- Preserve level for the voice
     softcut.rec(SC_VOICE, 0)    -- Don't record to the voice yet (0 = off)
 
-    -- Update the audio play data (but only if we're playing)
+    -- Update when the voice position changes
 
     softcut.phase_quant(SC_VOICE, SC_UPDATE_FREQ)
     last_position = null
@@ -139,22 +139,37 @@ function init()
             maintain_recording_window(pos)
 
         elseif state.mode == PLAY then
-
             -- We're playing, so we may need to move our note number, or stop
 
-            local end_pos = record:position(nd_seq.last_index)
-            if idx == nd_seq.last_index or pos >= end_pos then
-                -- We need to stop playing
+            local check_play_status = true
 
-                idx = nd_seq.last_index
-                to_stop_mode()
-                redraw()
-                return
-            end
+            while check_play_status do
 
-            -- We may need to move our note number
-            while need_to_move_idx(pos) do
-                idx = idx + 1
+                local debug1 = (idx == nd_seq.last_index) and "true" or "false"
+                debug1 = " " .. idx .. ", " .. debug1
+                local debug2 = (beyond_end_of_recording(pos)) and "true" or "false"
+                local debug3 = ""
+                if debug2 then
+                    debug3 = " (pos = " .. pos .. ")"
+                end
+                print("event_phase(): Last idx? " .. debug1 .. "; beyond end? " .. debug2 .. debug3)
+                if idx == nd_seq.last_index or beyond_end_of_recording(pos) then
+                    -- We need to stop playing
+
+                    idx = nd_seq.last_index
+                    to_stop_mode()
+                    redraw()
+                    return
+                end
+
+                -- We may need to move our note number
+
+                check_play_status = false
+                if record:position_at_or_beyond(pos, idx + 1) then
+                    idx = idx + 1
+                    check_play_status = true
+                    print("event_phase(): Inc idx to " .. idx)
+                end
             end
 
         end
@@ -166,7 +181,7 @@ function init()
 
 end
 
--- Do we need to move `idx` given our new audio position?
+--[[-- Do we need to move `idx` given our new audio position?
 -- @param pos    Our new audio position
 --
 function need_to_move_idx(pos)
@@ -188,6 +203,23 @@ function need_to_move_idx(pos)
 
     return next_idx_pos <= pos or pos < idx_pos
 
+end--]]
+
+-- Is our audio position beyond the end of the recording?
+-- This isn't so straightforward, as the recording may have looped.
+-- @param pos    The position to test.
+--
+function beyond_end_of_recording(pos)
+    local start_pos = record:position(nd_seq.first_index)
+    local end_pos = record:position(nd_seq.last_index)
+
+    if start_pos <= end_pos then
+        -- The start and end of the recording haven't looped
+        return pos < start_pos or pos > end_pos
+    end
+
+    -- The start and end of the recording have looped
+    return end_pos < pos and pos < start_pos
 end
 
 -- If necessary, move the recording window, for when we've recorded
@@ -563,6 +595,9 @@ function to_stop_mode()
         --  Cut the recording to the start
         record:cut()
         idx = nd_seq.last_index
+        for i = 1, idx do
+            print(i .. ", pos = " .. record:position(i))
+        end
     end
 
     stop_recording_audio()
@@ -655,4 +690,5 @@ function start_playing_audio()
 
     softcut.position(SC_VOICE, audio_position)
     softcut.play(SC_VOICE, 1)    -- Start playing (1 = on)
+    print("start_playing_audio(): idx = " .. idx .. ", audio_position = " .. audio_position)
 end
