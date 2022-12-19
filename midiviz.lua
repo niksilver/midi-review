@@ -126,49 +126,55 @@ function init()
 
     softcut.phase_quant(SC_VOICE, SC_UPDATE_FREQ)
     last_position = null
-    softcut.event_phase(function(i, pos)
-
-        if state.mode == STOP then
-            return
-        end
-
-        if state.mode == RECORD then
-            -- We're recording, so we may need to move the rolling recording window,
-            -- as well as update the audio position.
-
-            maintain_recording_window(pos)
-
-        elseif state.mode == PLAY then
-            -- We're playing, so we may need to move our note number, or stop
-
-            repeat
-                if idx == nd_seq.last_index or record:beyond_end(pos) then
-                    -- We need to stop playing
-
-                    idx = nd_seq.last_index
-                    to_stop_mode()
-                    redraw()
-                    return
-                end
-
-                -- We may need to move our note number
-
-                check_play_status = false
-                if record:position_at_or_beyond(pos, idx + 1) then
-                    idx = idx + 1
-                    check_play_status = true
-                    print("event_phase(): Inc idx to " .. idx)
-                end
-
-            until not check_play_status
-
-        end
-
-        audio_position = pos
-        redraw()
-    end)
+    softcut.event_phase(event_phase)
     softcut.poll_start_phase()
 
+end
+
+-- Respond when we get period information about the position of the
+-- play/record head. This is a callback for `softcut.event_phase`.
+-- @param voice    Voice of the head.
+-- @param pos    The position of the play/record head.
+--
+function event_phase(voice, pos)
+
+    if state.mode == STOP then
+        return
+    end
+
+    if state.mode == RECORD then
+        -- We're recording, so we may need to move the rolling recording window,
+        -- as well as update the audio position.
+
+        maintain_recording_window(pos)
+
+    elseif state.mode == PLAY then
+        -- We're playing, so we may need to move our note number, or stop
+
+        repeat
+            if idx == nd_seq.last_index or record:beyond_end(pos) then
+                -- We need to stop playing
+
+                idx = nd_seq.last_index
+                to_stop_mode()
+                redraw()
+                return
+            end
+
+            -- We may need to move our note number
+
+            check_play_status = false
+            if record:position_at_or_beyond(pos, idx + 1) then
+                idx = idx + 1
+                check_play_status = true
+                print("event_phase(): Inc idx to " .. idx)
+            end
+
+        until not check_play_status
+    end
+
+    audio_position = pos
+    redraw()
 end
 
 -- If necessary, move the recording window, for when we've recorded
