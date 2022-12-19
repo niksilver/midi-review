@@ -561,6 +561,7 @@ function to_stop_mode()
     if state.mode == RECORD and idx then
         note_vel = {}
         nd_seq:append(note_vel)
+        stop_recording_audio()
 
         --  Cut the recording to the start
         record:cut()
@@ -568,9 +569,32 @@ function to_stop_mode()
         for i = 1, idx do
             print(i .. ", pos = " .. record:position(i))
         end
+
+        -- Clear the buffer that's not the audio, if there is any
+
+        if nd_seq.last_index >= 2 then
+            local start_pos = record:position(nd_seq.first_index)
+            local end_pos = record:position(nd_seq.last_index)
+
+            if start_pos < end_pos then
+                -- The audio doesn't loop, so we need to clear
+                -- before the start position and after the end position
+
+                local duration = start_pos - SC_BUFFER_START
+                softcut.buffer_clear_region(SC_BUFFER_START, duration, 0, 0)
+
+                local duration = SC_BUFFER_END - end_pos
+                softcut.buffer_clear_region(end_pos, duration, 0, 0)
+            else
+                -- The audio does loop, so we need to clear from the
+                -- end position to the start position
+
+                local duration = start_pos - end_pos
+                softcut.buffer_clear_region(SC_BUFFER_END, duration, 0, 0)
+            end
+        end
     end
 
-    stop_recording_audio()
     stop_playing_audio()
 
     state.mode = STOP
