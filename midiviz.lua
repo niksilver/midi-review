@@ -141,19 +141,8 @@ function init()
         elseif state.mode == PLAY then
             -- We're playing, so we may need to move our note number, or stop
 
-            local check_play_status = true
-
-            while check_play_status do
-
-                local debug1 = (idx == nd_seq.last_index) and "true" or "false"
-                debug1 = " " .. idx .. ", " .. debug1
-                local debug2 = (beyond_end_of_recording(pos)) and "true" or "false"
-                local debug3 = ""
-                if debug2 then
-                    debug3 = " (pos = " .. pos .. ")"
-                end
-                print("event_phase(): Last idx? " .. debug1 .. "; beyond end? " .. debug2 .. debug3)
-                if idx == nd_seq.last_index or beyond_end_of_recording(pos) then
+            repeat
+                if idx == nd_seq.last_index or record:beyond_end(pos) then
                     -- We need to stop playing
 
                     idx = nd_seq.last_index
@@ -170,7 +159,8 @@ function init()
                     check_play_status = true
                     print("event_phase(): Inc idx to " .. idx)
                 end
-            end
+
+            until not check_play_status
 
         end
 
@@ -179,47 +169,6 @@ function init()
     end)
     softcut.poll_start_phase()
 
-end
-
---[[-- Do we need to move `idx` given our new audio position?
--- @param pos    Our new audio position
---
-function need_to_move_idx(pos)
-    local idx_pos = record:position(idx)
-    local next_idx_pos = record:position(idx+1)
-
-    -- Consider two cases separately:
-    -- where the audio from idx to idx+1 hasn't looped; and
-    -- where the audio from idx to idx+1 has looped.
-
-    if idx_pos < next_idx_pos then
-        -- There's no loop
-        return pos >= next_idx_pos
-    end
-
-    -- There is a loop from idx to idx+1.
-    -- The position of idx+1 [A] is less than the position of idx [B],
-    -- so we need to move idx if our position is between [A] and [B].
-
-    return next_idx_pos <= pos or pos < idx_pos
-
-end--]]
-
--- Is our audio position beyond the end of the recording?
--- This isn't so straightforward, as the recording may have looped.
--- @param pos    The position to test.
---
-function beyond_end_of_recording(pos)
-    local start_pos = record:position(nd_seq.first_index)
-    local end_pos = record:position(nd_seq.last_index)
-
-    if start_pos <= end_pos then
-        -- The start and end of the recording haven't looped
-        return pos < start_pos or pos > end_pos
-    end
-
-    -- The start and end of the recording have looped
-    return end_pos < pos and pos < start_pos
 end
 
 -- If necessary, move the recording window, for when we've recorded

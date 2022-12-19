@@ -74,6 +74,23 @@ function C:position_at_or_beyond(pos, i)
     return start_pos <= i_pos or i_pos <= pos
 end
 
+-- Is our audio position beyond the end of the recording?
+-- This isn't so straightforward, as the recording may have looped.
+-- @param pos    The position to test.
+--
+function C:beyond_end(pos)
+    local start_pos = self:position(self.idx_nd.first_index)
+    local end_pos = self:position(self.idx_nd.last_index)
+
+    if start_pos <= end_pos then
+        -- The start and end of the recording haven't looped
+        return pos < start_pos or pos > end_pos
+    end
+
+    -- The start and end of the recording have looped
+    return end_pos < pos and pos < start_pos
+end
+
 -- Calculate the duration of the recording from the first MIDI note data
 -- to the given position.
 -- @param pos    The position in the buffer of the end of the period

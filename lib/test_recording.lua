@@ -450,3 +450,89 @@ function test_position_at_or_beyond_with_looping()
     lu.assertEquals(rec:position_at_or_beyond(10.2, 3), true)
     lu.assertEquals(rec:position_at_or_beyond(10.2, 4), false)
 end
+
+function test_beyond_end_no_loop()
+    local idx_nd = idx_ndata.new(dummy_time)
+
+    -- Our recording loop runs from positions 10 to 12 in the buffer
+    local rec = recording.new(10, 2, idx_nd)
+
+    -- Put some dummy data into the note data sequence
+
+    idx_nd:append({}, 1000.0)    -- 1, position 10.0
+    idx_nd:append({}, 1000.3)    -- 2, position 10.3
+    idx_nd:append({}, 1000.7)    -- 3, position 10.7
+    idx_nd:append({}, 1001.1)    -- 4, position 11.1
+
+    -- Due to precision errors we'll set up some variables which represent
+    -- the actual position of various clock times which are at
+    -- particular MIDI events.
+
+    local p_10_0 = rec:position(1)    -- Represents position 10.0
+    local p_10_3 = rec:position(2)    -- Represents position 10.3
+    local p_11_1 = rec:position(4)    -- Represents position 11.0
+
+    -- Test certain positions
+
+    lu.assertEquals(rec:beyond_end(9.5), true)
+    lu.assertEquals(rec:beyond_end(p_10_0), false)
+    lu.assertEquals(rec:beyond_end(p_10_3), false)
+    lu.assertEquals(rec:beyond_end(10.5), false)
+    lu.assertEquals(rec:beyond_end(p_11_1), false)
+    lu.assertEquals(rec:beyond_end(11.5), true)
+    lu.assertEquals(rec:beyond_end(12.0), true)
+    lu.assertEquals(rec:beyond_end(12.5), true)
+
+    -- Delete the first MIDI event and test again
+
+    idx_nd:delete_from_front()
+
+    lu.assertEquals(rec:beyond_end(9.5), true)
+    lu.assertEquals(rec:beyond_end(p_10_0), true)
+    lu.assertEquals(rec:beyond_end(p_10_3), false)
+    lu.assertEquals(rec:beyond_end(10.5), false)
+    lu.assertEquals(rec:beyond_end(p_11_1), false)
+    lu.assertEquals(rec:beyond_end(11.5), true)
+    lu.assertEquals(rec:beyond_end(12.0), true)
+    lu.assertEquals(rec:beyond_end(12.5), true)
+end
+
+function test_beyond_end_with_loop()
+    local idx_nd = idx_ndata.new(dummy_time)
+
+    -- Our recording loop runs from positions 10 to 12 in the buffer
+    local rec = recording.new(10, 2, idx_nd)
+
+    -- Put some dummy data into the note data sequence
+
+    idx_nd:append({}, 1000.0)
+    idx_nd:append({}, 1000.3)
+    idx_nd:append({}, 1000.7)    -- 1, position 10.7 after cutting
+    idx_nd:append({}, 1001.1)    -- 2, position 11.1
+    idx_nd:append({}, 1001.8)    -- 3, position 11.8
+    idx_nd:append({}, 1002.2)    -- 4, position 10.2
+
+    idx_nd:delete_from_front()
+    idx_nd:delete_from_front()
+    rec:cut()
+
+    -- Recording now runs from positions 10.7 to 10.2
+
+    -- Due to precision errors we'll set up some variables which represent
+    -- the actual position of various clock times which are at
+    -- particular MIDI events.
+
+    local p_10_7 = rec:position(1)    -- Represents position 10.7
+    local p_10_2 = rec:position(4)    -- Represents position 10.2
+
+    -- Test certain positions
+
+    lu.assertEquals(rec:beyond_end(9.5), false)
+    lu.assertEquals(rec:beyond_end(10.1), false)
+    lu.assertEquals(rec:beyond_end(p_10_2), false)
+    lu.assertEquals(rec:beyond_end(10.5), true)
+    lu.assertEquals(rec:beyond_end(p_10_7), false)
+    lu.assertEquals(rec:beyond_end(11.5), false)
+    lu.assertEquals(rec:beyond_end(12.5), false)
+end
+
