@@ -1,6 +1,36 @@
 -- Representation of a softcut recording, which may have looped.
 -- To be used in conjunction with `idx_ndata` to track MIDI notes.
 --
+-- This class mainly tracks the start and end of a recording.
+-- When a recording starts it will begin at the start of the softcut
+-- buffer. However, it should have a maximum length, which will be
+-- slightly less than the full length of the softcut buffer.
+-- Meanwhile, MIDI note data will be recorded against the audio.
+--
+-- Audio may continue to be recorded beyond the duration of the
+-- softcut buffer, in which case it loops round to the start and
+-- continues.
+--
+-- We distinguish between time and position. Time is the clock time
+-- of MIDI note data coming in. Position is the position in the
+-- softcut buffer of something. We will know the position of the
+-- start of the recording (because we set that) but it's difficult to
+-- know the position of any MIDI note data. That's because when MIDI
+-- note data comes in we can only ask for the clock time (so we record
+-- that). Asking for the record head position is an asychronous call,
+-- so can't be relied upon for accuracy. So to work out the position
+-- of any MIDI note data we make a calculation based on the position of
+-- the start of the recording, the clock time of the start of the recording,
+-- and the clock time of the MIDI event.
+--
+-- As the recording continues earlier note data and audio may need
+-- to be deleted from the front of the recording, to keep it to the
+-- maximum length. The way this works is that the sequence of note
+-- data will be deleted from the front (where the oldest data is)
+-- as the recording lengthens. When this happens we still keep the
+-- time and position of the original start of the recording. Once
+-- recording stops we call the cut method. This updates the (new) start
+-- of the recording to align with the (new) first MIDI note data.
 
 local C = {}
 
