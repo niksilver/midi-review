@@ -149,28 +149,31 @@ function event_phase(voice, pos)
         maintain_recording_window(pos)
 
     elseif state.mode == PLAY then
-        -- We're playing, so we may need to move our note number, or stop
+        -- We're playing, so we may need to move our note number, or stop.
+        -- But only check any of this we've not just started, otherwise
+        -- lots of assumptions will be wrong.
 
-        repeat
-            if idx == nd_seq.last_index or record:beyond_end(pos) then
-                -- We need to stop playing
+        if not just_starting(pos) then
+            repeat
+                if idx == nd_seq.last_index or record:beyond_end(pos) then
+                    -- We need to stop playing
 
-                idx = nd_seq.last_index
-                to_stop_mode()
-                redraw()
-                return
-            end
+                    idx = nd_seq.last_index
+                    to_stop_mode()
+                    redraw()
+                    return
+                end
 
-            -- We may need to move our note number
+                -- We may need to move our note number
 
-            check_play_status = false
-            if record:position_at_or_beyond(pos, idx + 1) then
-                idx = idx + 1
-                check_play_status = true
-                print("event_phase(): Inc idx to " .. idx)
-            end
+                check_play_status = false
+                if record:position_at_or_beyond(pos, idx + 1) then
+                    idx = idx + 1
+                    check_play_status = true
+                end
 
-        until not check_play_status
+            until not check_play_status
+        end
     end
 
     audio_position = pos
@@ -196,6 +199,20 @@ function maintain_recording_window(pos)
             return
         end
     end
+end
+
+-- Are we just starting playing? This should be a simple check to see if
+-- our play head is the same as the position of the first note data.
+-- However there's an inaccuracy where the play head may first align itself
+-- to a point fractionally before the first note data (even though we've
+-- just put it in the right place!). So we need to allow for a bit of
+-- leeway.
+-- @param pos    The current position of the play head
+--
+function just_starting(pos)
+    local start_pos = record:position(1)
+
+    return pos <= start_pos and math.abs(pos - start_pos) <= SC_UPDATE_FREQ
 end
 
 -- (Re)draw the screen
