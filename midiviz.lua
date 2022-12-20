@@ -53,6 +53,10 @@ play_start_idx = nil
 
 SC_UPDATE_FREQ = 1/20
 
+-- Fade time for creating silence either side of the recording
+
+FADE_TIME = 0.1
+
 -- Current key/screen state, including
 -- when k2 was pressed down (for long press);
 -- rolling window length;
@@ -586,7 +590,7 @@ function to_stop_mode()
                 -- before the start position and after the end position
 
                 local duration = start_pos - SC_BUFFER_START
-                softcut.buffer_clear_region(SC_BUFFER_START, duration, 0.5, 0)
+                softcut.buffer_clear_region(SC_BUFFER_START, duration, FADE_TIME, 0)
                 print("to_stop_mode(): Cleared from " .. SC_BUFFER_START .. " to " .. (SC_BUFFER_START+duration))
 
                 local duration = SC_BUFFER_END - end_pos
@@ -621,9 +625,9 @@ function clear_buffer_end(end_pos, duration)
     softcut.buffer_copy_mono(
         other_buffer, SC_VOICE,  -- Source buffer, destination buffer
         1.0,                     -- Start in source
-        end_pos - 0.5,           -- Start in destination
+        end_pos - FADE_TIME,     -- Start in destination
         duration,
-        0.1, -- Fade time
+        FADE_TIME,
         0,   -- Preserve
         0)   -- Don't reverse
 end
