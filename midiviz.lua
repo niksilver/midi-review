@@ -547,8 +547,20 @@ function key(n, z)
         end
     end
     if n == 3 and z == 0 then
-        local stamp = util.time()
-        _norns.screen_export_png("/home/we/dust/midiviz_" .. stamp .. ".png")
+        -- local stamp = util.time()
+        -- _norns.screen_export_png("/home/we/dust/midiviz_" .. stamp .. ".png")
+
+        softcut.position(SC_VOICE, SC_BUFFER_START)
+
+        softcut.play(SC_VOICE, 1)    -- Start playing (1 = on)
+        print("key() with n = 3: starting at position " .. SC_BUFFER_START)
+        clock.run(function()
+            print("key() with n = 3: sleeping...")
+            clock.sleep(SC_BUFFER_DURATION)
+            print("key() with n = 3: ...done sleeping")
+
+            -- stop_playing_audio()
+        end)
     end
 end
 
@@ -581,16 +593,37 @@ function to_stop_mode()
                 -- before the start position and after the end position
 
                 local duration = start_pos - SC_BUFFER_START
-                softcut.buffer_clear_region(SC_BUFFER_START, duration, 0, 0)
+                softcut.buffer_clear_region(SC_BUFFER_START, duration, 0.5, 0)
+                print("to_stop_mode(): Cleared from " .. SC_BUFFER_START .. " to " .. (SC_BUFFER_START+duration))
 
                 local duration = SC_BUFFER_END - end_pos
-                softcut.buffer_clear_region(end_pos, duration, 0, 0)
+                -- softcut.buffer_clear_region(end_pos, duration, 0.5, 0)
+                -- Special clear operation
+                softcut.buffer_copy_mono(
+                    3 - SC_VOICE, SC_VOICE,  -- From buffer, to buffer
+                    1.0, -- Start in source
+                    end_pos, -- Start in destination
+                    duration,
+                    0.5, -- Fade time
+                    0, -- Preserve
+                    0) -- Don't reverse
+                print("to_stop_mode(): Cleared from " .. end_pos .. " to " .. (end_pos+duration))
             else
                 -- The audio does loop, so we need to clear from the
                 -- end position to the start position
 
                 local duration = start_pos - end_pos
-                softcut.buffer_clear_region(SC_BUFFER_END, duration, 0, 0)
+                -- softcut.buffer_clear_region(end_pos, duration, 0.5, 0)
+                -- Special clear operation
+                softcut.buffer_copy_mono(
+                    3 - SC_VOICE, SC_VOICE,  -- From buffer, to buffer
+                    1.0, -- Start in source
+                    end_pos - 0.5, -- Start in destination
+                    duration,
+                    0.1, -- Fade time
+                    0, -- Preserve
+                    0) -- Don't reverse
+                print("to_stop_mode(): Cleared from " .. end_pos .. " to " .. (end_pos+duration))
             end
         end
     end
