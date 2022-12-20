@@ -54,6 +54,18 @@ function C.new(buffer_start, buffer_duration, idx_nd)
     return obj
 end
 
+-- Start position of our recording.
+--
+function C:start_position()
+    return self:position(self.idx_nd.first_index)
+end
+
+-- End position of our recording.
+--
+function C:end_position()
+    return self:position(self.idx_nd.last_index)
+end
+
 -- Get the buffer position given the note data index.
 -- @param i    Index of the note data.
 --
@@ -84,8 +96,8 @@ end
 -- @param i  The index we want to test the position against.
 --
 function C:position_at_or_beyond(pos, i)
-    local start_pos = self:position(self.idx_nd.first_index)
-    local end_pos = self:position(self.idx_nd.last_index)
+    local start_pos = self:start_position()
+    local end_pos = self:end_position()
     local i_pos = self:position(i)
 
     if start_pos < end_pos then
@@ -109,8 +121,8 @@ end
 -- @param pos    The position to test.
 --
 function C:beyond_end(pos)
-    local start_pos = self:position(self.idx_nd.first_index)
-    local end_pos = self:position(self.idx_nd.last_index)
+    local start_pos = self:start_position()
+    local end_pos = self:end_position()
 
     if start_pos <= end_pos then
         -- The start and end of the recording haven't looped
@@ -132,7 +144,7 @@ function C:duration(pos)
         return 0
     end
 
-    local start_pos = self:position(self.idx_nd.first_index)
+    local start_pos = self:start_position()
 
     -- We may have an easy calculation
     if start_pos <= pos then
@@ -155,9 +167,7 @@ function C:cut()
         return nil
     end
 
-    local pos = self:position(first_index)
-
-    self.start_pos = pos
+    self.start_pos = self:start_position()
     return self.idx_nd:reindex()
 end
 

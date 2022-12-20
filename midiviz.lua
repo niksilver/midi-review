@@ -595,8 +595,8 @@ end
 -- contain audio of the last time round the loop.
 --
 function clear_non_recording()
-    local start_pos = record:position(nd_seq.first_index)
-    local end_pos = record:position(nd_seq.last_index)
+    local start_pos = record:start_position()
+    local end_pos = record:end_position()
 
     if start_pos < end_pos then
         -- The audio doesn't loop, so we need to clear
