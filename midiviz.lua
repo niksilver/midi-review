@@ -582,34 +582,41 @@ function to_stop_mode()
         -- Clear the buffer that's not the audio, if there is any
 
         if nd_seq.last_index >= 2 then
-            local start_pos = record:position(nd_seq.first_index)
-            local end_pos = record:position(nd_seq.last_index)
-
-            if start_pos < end_pos then
-                -- The audio doesn't loop, so we need to clear
-                -- before the start position and after the end position
-
-                local duration = start_pos - SC_BUFFER_START
-                softcut.buffer_clear_region(SC_BUFFER_START, duration, FADE_TIME, 0)
-                print("to_stop_mode(): Cleared from " .. SC_BUFFER_START .. " to " .. (SC_BUFFER_START+duration))
-
-                local duration = SC_BUFFER_END - end_pos
-                clear_buffer_end(end_pos, duration)
-                print("to_stop_mode(): Cleared from " .. end_pos .. " to " .. (end_pos+duration))
-            else
-                -- The audio does loop, so we need to clear from the
-                -- end position to the start position
-
-                local duration = start_pos - end_pos
-                clear_buffer_end(end_pos, duration)
-                print("to_stop_mode(): Cleared from " .. end_pos .. " to " .. (end_pos+duration))
-            end
+            clear_non_recording()
         end
     end
 
     stop_playing_audio()
 
     state.mode = STOP
+end
+
+-- Clear the buffer that's outside of our recording, as it may
+-- contain audio of the last time round the loop.
+--
+function clear_non_recording()
+    local start_pos = record:position(nd_seq.first_index)
+    local end_pos = record:position(nd_seq.last_index)
+
+    if start_pos < end_pos then
+        -- The audio doesn't loop, so we need to clear
+        -- before the start position and after the end position
+
+        local duration = start_pos - SC_BUFFER_START
+        softcut.buffer_clear_region(SC_BUFFER_START, duration, FADE_TIME, 0)
+        print("to_stop_mode(): Cleared from " .. SC_BUFFER_START .. " to " .. (SC_BUFFER_START+duration))
+
+        local duration = SC_BUFFER_END - end_pos
+        clear_buffer_end(end_pos, duration)
+        print("to_stop_mode(): Cleared from " .. end_pos .. " to " .. (end_pos+duration))
+    else
+        -- The audio does loop, so we need to clear from the
+        -- end position to the start position
+
+        local duration = start_pos - end_pos
+        clear_buffer_end(end_pos, duration)
+        print("to_stop_mode(): Cleared from " .. end_pos .. " to " .. (end_pos+duration))
+    end
 end
 
 -- Fade the end of the recording.
