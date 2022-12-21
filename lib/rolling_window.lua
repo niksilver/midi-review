@@ -20,6 +20,12 @@ function C.new(sizes, default)
     return obj
 end
 
+-- Get the size of the rolling window.
+--
+function C:size()
+    return self.sizes[self.current_index]
+end
+
 -- Index of the current windows size.
 --
 C.current_index = nil
