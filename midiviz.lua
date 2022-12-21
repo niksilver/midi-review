@@ -80,12 +80,13 @@ state = {
     mode = STOP,
     k2_down = nil,
     window = Window.new({1, 2, 3, SC_BUFFER_DURATION-1}, 2),
-    window_duration = SC_BUFFER_DURATION - 1,
+    window_duration = nil,
     popup_message = nil,
     popup_appeared = 0,
     popup_handle = nil,
     last_event = NO_EVENT,
 }
+window_duration = state.window:size()
 
 LONG_PRESS_SECS = 0.5  -- Length of a long press, in seconds
 
@@ -310,7 +311,7 @@ function redraw()
     end
 
     if state.popup_message then
-        local length = #state.window:max_text_length() + 2
+        local length = state.window:max_text_length() + 2
 
         screen.level(0)
         screen.rect(64 - 2.5 * length, 32 - 7, length*5, 10)
@@ -531,6 +532,7 @@ function key(n, z)
                 stop_playing_audio()
 
                 state.last_event = NO_EVENT
+                state.window_duration = state.window:size()
                 state.mode = RECORD
 
             elseif state.mode == STOP then
