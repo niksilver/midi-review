@@ -1,7 +1,6 @@
--- midiviz
+-- midi review
 --
--- Visualise and review MIDI
--- key presses.
+-- Visualise & review MIDI notes.
 --
 -- k2 = play/stop
 -- k2 long press = record
@@ -482,7 +481,7 @@ end
 function draw_notch(i, level)
     screen.level(level)
     screen.move(timeline_x(i), TIMELINE_Y - 2)
-    screen.line_rel(0, TIMELINE_Y + 1)
+    screen.line_rel(0, 3)
     screen.stroke()
 end
 

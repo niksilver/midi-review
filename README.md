@@ -1,4 +1,4 @@
-# midiviz
+# midi review
 
 Simple visualisation, recording and playback for the monome norns
 of what you've just been playing on your MIDI device.
@@ -13,7 +13,7 @@ or how (un)evenly I'm playing all the notes in a chord.
 MIDI notes are displayed as note names and vertical bars.
 Recording captures both the MIDI notes and the audio.
 Then you can scroll back to see those notes, and replay what
-you've recorded.
+you've recorded. Non-note MIDI data is not captured or visualised.
 
 - k2 = play/stop
 - k2 long press = record
