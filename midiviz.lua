@@ -1,11 +1,12 @@
 -- midiviz
 --
--- Visualisation of MIDI key presses.
+-- Visualise and review MIDI
+-- key presses.
 --
 -- k2 = play/stop
 -- k2 long press = record
 -- e2 = scroll through time
--- e3 = change rolling recording window
+-- e3 = change recording period
 
 Musicutil = require('musicutil')
 MidiSeq = include('lib/midi_sequence')
@@ -29,7 +30,7 @@ init_note_data()
 SC_VOICE = 1
 SC_BUFFER = 1
 SC_BUFFER_START = 1
-SC_BUFFER_DURATION = 5    -- Seconds
+SC_BUFFER_DURATION = 60    -- Seconds
 SC_BUFFER_END = SC_BUFFER_START + SC_BUFFER_DURATION
 
 -- Voice position, when playing and recording
@@ -80,7 +81,7 @@ TRANSPORT_EVENT = 12
 state = {
     mode = STOP,
     k2_down = nil,
-    window = Window.new({1, 2, 3, SC_BUFFER_DURATION-1}, 2),
+    window = Window.new({5, 10, 20, 30}, 2),
     window_duration = nil,
     popup_message = nil,
     popup_appeared = 0,
