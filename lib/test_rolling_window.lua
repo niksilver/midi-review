@@ -94,3 +94,16 @@ function test_text()
     window:delta(1)
     lu.assertEquals(window:text(), "about 5 min 30 sec")
 end
+
+function test_max_text_length()
+    local window = rw.new({
+        10,
+        20,
+        60,
+        130,
+        62,
+        120,
+    })
+
+    lu.assertEquals(window:max_text_length(), #"about 2 min 10 sec")
+end

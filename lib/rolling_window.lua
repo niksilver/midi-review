@@ -47,7 +47,13 @@ end
 -- A text string to describe the size of our current window.
 --
 function C:text()
-    local t = self:size()
+    return period_to_text(self:size())
+end
+
+-- Describe a number of seconds as text
+-- @param t    The time period to describe.
+--
+function period_to_text(t)
     local about_part = ""
     local min_part = ""
     local sec_part = ""
@@ -69,7 +75,8 @@ function C:text()
     return join({about_part, min_part, sec_part}, " ")
 end
 
--- We have to make our own sting join function!
+-- We have to make our own string join function!
+-- We should ignore empty strings, but it's assumed there are no nils.
 -- @param array    Array of strings to join.
 -- @param sep    Separator between strings.
 --
@@ -102,6 +109,19 @@ function some_non_empty_due(array, i)
 
     return false
 end
+
+-- Get the length of the longest text message from all the size options.
+--
+function C:max_text_length()
+    local max = 0
+
+    for _, t in pairs(self.sizes) do
+        max = math.max(max, #period_to_text(t))
+    end
+
+    return max
+end
+
 -- Index of the current windows size.
 --
 C.current_index = nil
