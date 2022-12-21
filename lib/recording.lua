@@ -85,7 +85,7 @@ function C:position(i)
     -- This gap may be over the buffer duration any number of times,
     -- so remove those "whole" gaps, ensuring the position is in the buffer.
 
-    local whole_gaps = (gap_unlooped // self.buffer_duration) * self.buffer_duration
+    local whole_gaps = math.floor(gap_unlooped / self.buffer_duration) * self.buffer_duration
     local pos = self.buffer_start + gap_unlooped - whole_gaps
 
     return pos

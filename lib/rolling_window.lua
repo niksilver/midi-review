@@ -60,12 +60,12 @@ function period_to_text(t)
 
     if t > 120 then
         -- Round to the nearest 10 seconds
-        t = ((t + 5) // 10) * 10
+        t = math.floor((t + 5) / 10) * 10
         about_part = "about"
     end
 
     if t >= 60 then
-        min_part = (t // 60) .. " min"
+        min_part = math.floor(t / 60) .. " min"
     end
 
     if t % 60 > 0 then

@@ -13,13 +13,13 @@ Recording = include('lib/recording')
 Window = include('lib/rolling_window')
 
 -- note_vel - Map from note value to velocity of all notes currently held
--- nd_seq - Note data sequence of MIDI notes
--- idx - Current index where there's note data, or nil.
+-- mseq - Note data sequence of MIDI notes
+-- idx - Current index where there's MIDI note data sequence, or nil.
 
 function init_note_data()
     note_vel = {}
-    nd_seq = MidiSeq.new(util.time)
-    idx = nd_seq.first_index    -- This will be nil
+    mseq = MidiSeq.new(util.time)
+    idx = mseq.first_index    -- This will be nil
 end
 init_note_data()
 
@@ -36,13 +36,13 @@ SC_BUFFER_END = SC_BUFFER_START + SC_BUFFER_DURATION
 
 audio_position = nil
 
--- The audio recording, linked to the note data sequence.
--- Once we reinitialise the note data sequence then we need to call this
+-- The audio recording, linked to the MIDI note data sequence.
+-- Once we reinitialise the MIDI sequence then we need to call this
 -- again, because otherwise `record` will be referencing the old
--- note data sequence.
+-- MIDI note data sequence.
 
 function init_recording()
-    record = Recording.new(SC_BUFFER_START, SC_BUFFER_DURATION, nd_seq)
+    record = Recording.new(SC_BUFFER_START, SC_BUFFER_DURATION, mseq)
 end
 init_recording()
 
@@ -163,10 +163,10 @@ function event_phase(voice, pos)
 
         if not just_starting(pos) then
             repeat
-                if idx == nd_seq.last_index or record:beyond_end(pos) then
+                if idx == mseq.last_index or record:beyond_end(pos) then
                     -- We need to stop playing
 
-                    idx = nd_seq.last_index
+                    idx = mseq.last_index
                     to_stop_mode()
                     redraw()
                     return
@@ -197,9 +197,9 @@ end
 --
 function maintain_recording_window(pos)
     while record:duration(pos) > state.window_duration do
-        nd_seq:delete_from_front()
+        mseq:delete_from_front()
 
-        if nd_seq:length() == 0 then
+        if mseq:length() == 0 then
             -- We've just deleted the only MIDI event, so re-arm the recording
             init_note_data()
             stop_recording_audio()
@@ -210,9 +210,9 @@ function maintain_recording_window(pos)
 end
 
 -- Are we just starting playing? This should be a simple check to see if
--- our play head is the same as the position of the first note data.
+-- our play head is the same as the position of the first MIDI note data.
 -- However there's an inaccuracy where the play head may first align itself
--- to a point fractionally before the first note data (even though we've
+-- to a point fractionally before the first MIDI note data (even though we've
 -- just put it in the right place!). So we need to allow for a bit of
 -- leeway.
 -- @param pos    The current position of the play head
@@ -239,7 +239,7 @@ function redraw()
 
     if idx then
         -- Draw the notches on the timeline
-        for i = nd_seq.first_index, nd_seq.last_index do
+        for i = mseq.first_index, mseq.last_index do
             draw_notch(i, 2)
         end
 
@@ -255,7 +255,7 @@ function redraw()
         local start_x = timeline_x(idx)
         local current_length = 1
 
-        if idx < nd_seq.last_index then
+        if idx < mseq.last_index then
             local proportion = record:relative_time(idx, audio_position)
             local full_length = timeline_x(idx+1) - start_x
             current_length = math.max(1, full_length * proportion)
@@ -290,7 +290,7 @@ function redraw()
         -- We've just had some event, so work out what data we need to display
 
         local data =
-            state.last_event == NOTE_EVENT and note_vel or nd_seq:note_vel(idx)
+            state.last_event == NOTE_EVENT and note_vel or mseq:note_vel(idx)
         local notes = {}
 
         for note, vel in pairs(data) do
@@ -460,13 +460,13 @@ midi_device.event = function(data)
 
     if msg.type == "note_on" or msg.type == "note_off" then
         if state.mode == RECORD then
-            nd_seq:append(note_vel)
-            idx = nd_seq.last_index
+            mseq:append(note_vel)
+            idx = mseq.last_index
         end
         state.last_event = NOTE_EVENT
 
         -- Maybe this is the trigger to start recording audio
-        if nd_seq.last_index == 1 then
+        if mseq.last_index == 1 then
             start_recording_audio()
         end
 
@@ -493,17 +493,17 @@ function timeline_x(i)
     -- with the rolling recording window.
 
     local start_idx = 1
-    if state.mode == RECORD and nd_seq.first_index then
-        start_idx = nd_seq.first_index
+    if state.mode == RECORD and mseq.first_index then
+        start_idx = mseq.first_index
     end
 
     -- Get the time difference from first to last note
-    local time_first = nd_seq:time(start_idx)
-    local time_last = nd_seq:time(nd_seq.last_index)
+    local time_first = mseq:time(start_idx)
+    local time_last = mseq:time(mseq.last_index)
     local time_diff = time_last - time_first
 
     -- Calculate the x position of the notch
-    local ndata = nd_seq:get(i)
+    local ndata = mseq:get(i)
     local x = (ndata.time - time_first) / time_diff * TIMELINE_WIDTH + 1
     if time_diff == 0 then x = 1 end
 
@@ -537,7 +537,7 @@ function key(n, z)
             elseif state.mode == STOP then
                 -- Short press - go into play mode if we can
 
-                if nd_seq.first_index then
+                if mseq.first_index then
                     stop_recording_audio()
 
                     state.mode = PLAY
@@ -559,20 +559,20 @@ end
 --
 function to_stop_mode()
     -- If we were recording, and we got some MIDI data,
-    -- record final empty note data, stop audio recording, and cut it.
+    -- record final empty MIDI note data, stop audio recording, and cut it.
 
     if state.mode == RECORD and idx then
         note_vel = {}
-        nd_seq:append(note_vel)
+        mseq:append(note_vel)
         stop_recording_audio()
 
         --  Cut the recording to the start
         record:cut()
-        idx = nd_seq.last_index
+        idx = mseq.last_index
 
         -- Clear the buffer that's not the audio, if there is any
 
-        if nd_seq.last_index >= 2 then
+        if mseq.last_index >= 2 then
             clear_non_recording()
         end
     end
@@ -633,8 +633,8 @@ end
 --
 function enc(n, d)
     if n == 2 then
-        if nd_seq:length() > 0 then
-            idx = util.clamp(idx + d, nd_seq.first_index, nd_seq.last_index)
+        if mseq:length() > 0 then
+            idx = util.clamp(idx + d, mseq.first_index, mseq.last_index)
             state.last_event = TRANSPORT_EVENT
         end
 
@@ -698,7 +698,7 @@ function stop_playing_audio()
     play_start_idx = nil
 end
 
--- Start playing audio from the point of where we are in the note data.
+-- Start playing audio from the point of where we are in the MIDI sequence.
 -- We'll also track our audio play position and update the note index
 -- on the timeline.
 --
