@@ -9,6 +9,7 @@
 musicutil = require('musicutil')
 idx_ndata = include('lib/idx_ndata')
 Recording = include('lib/recording')
+Window = include('lib/rolling_window')
 
 -- note_vel - Map from note value to velocity of all notes currently held
 -- nd_seq - Note data sequence of MIDI notes
@@ -78,6 +79,7 @@ TRANSPORT_EVENT = 12
 state = {
     mode = STOP,
     k2_down = nil,
+    window = Window.new({1, 2, 3, SC_BUFFER_DURATION-1}, 2),
     window_duration = SC_BUFFER_DURATION - 1,
     popup_message = nil,
     popup_appeared = 0,
@@ -308,7 +310,7 @@ function redraw()
     end
 
     if state.popup_message then
-        local length = #state.popup_message
+        local length = #state.window:max_text_length() + 2
 
         screen.level(0)
         screen.rect(64 - 2.5 * length, 32 - 7, length*5, 10)
@@ -671,7 +673,8 @@ function enc(n, d)
             clock.cancel(state.popup_handle)
         end
 
-        state.popup_message = "Hello!"
+        state.window:delta(d)
+        state.popup_message = state.window:text()
         state.popup_appeared = util.time()
         state.popup_handle = clock.run(function()
             clock.sleep(POPUP_DURATION)
