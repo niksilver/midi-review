@@ -75,7 +75,7 @@ function period_to_text(t)
     return join({about_part, min_part, sec_part}, " ")
 end
 
--- We have to make our own string join function!
+-- Join some strings with a separator.
 -- We should ignore empty strings, but it's assumed there are no nils.
 -- @param array    Array of strings to join.
 -- @param sep    Separator between strings.

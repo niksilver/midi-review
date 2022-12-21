@@ -1,11 +1,14 @@
 # midiviz
 
 Simple visualisation, recording and playback for the monome norns
-of what you're currently playing on your MIDI device.
+of what you've just been playing on your MIDI device.
+
+![Screenshot](screenshot.png)
 
 I find this useful when I'm practising digital piano and want to review
-what I've done - for example, where I hit a wrong note, or if I'm
-playing all the notes in a chord relatively evenly.
+what I've done - for example,
+if I want to see which wrong note I hit,
+or how (un)evenly I'm playing all the notes in a chord.
 
 MIDI notes are displayed as note names and vertical bars.
 Recording captures both the MIDI notes and the audio.
@@ -15,12 +18,15 @@ you've recorded.
 - k2 = play/stop
 - k2 long press = record
 - e2 = scroll through time
+- e3 = change size of recording window
 
-![Screenshot](screenshot.png)
+When you start recording, notes and audio are recorded into a rolling
+window. For example, if the rolling window is 10 seconds then (only)
+the last 10 seconds will be retained. If you change the size of the
+rolling window then that change will only come into effect when
+you next start recording.
 
 ## Running the tests
-
-There aren't enough tests.
 
 ```
 cd lib
