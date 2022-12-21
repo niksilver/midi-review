@@ -6,8 +6,8 @@
 -- k2 long press = record
 -- e2 = scroll through time
 
-musicutil = require('musicutil')
-idx_ndata = include('lib/idx_ndata')
+Musicutil = require('musicutil')
+IdxNdata = include('lib/idx_ndata')
 Recording = include('lib/recording')
 Window = include('lib/rolling_window')
 
@@ -17,7 +17,7 @@ Window = include('lib/rolling_window')
 
 function init_note_data()
     note_vel = {}
-    nd_seq = idx_ndata.new(util.time)
+    nd_seq = IdxNdata.new(util.time)
     idx = nd_seq.first_index    -- This will be nil
 end
 init_note_data()
@@ -86,7 +86,7 @@ state = {
     popup_handle = nil,
     last_event = NO_EVENT,
 }
-window_duration = state.window:size()
+state.window_duration = state.window:size()
 
 LONG_PRESS_SECS = 0.5  -- Length of a long press, in seconds
 
@@ -391,7 +391,7 @@ function display_note_names(notes)
 
     table.sort(notes)
     for i, n in ipairs(notes) do
-        local nnam = musicutil.note_num_to_name(n)
+        local nnam = Musicutil.note_num_to_name(n)
         name[i] = nnam
         name_size[i] = #nnam * 5
         if i < #notes then
@@ -465,7 +465,6 @@ midi_device.event = function(data)
         state.last_event = NOTE_EVENT
 
         -- Maybe this is the trigger to start recording audio
-        -- if #idx_ndata == 1 then
         if nd_seq.last_index == 1 then
             start_recording_audio()
         end
@@ -503,7 +502,6 @@ function timeline_x(i)
     local time_diff = time_last - time_first
 
     -- Calculate the x position of the notch
-    -- local ndata = idx_ndata[i]
     local ndata = nd_seq:get(i)
     local x = (ndata.time - time_first) / time_diff * TIMELINE_WIDTH + 1
     if time_diff == 0 then x = 1 end
@@ -554,15 +552,6 @@ function key(n, z)
             redraw()
         end
     end
-    if n == 3 and z == 0 then
-        -- local stamp = util.time()
-        -- _norns.screen_export_png("/home/we/dust/midiviz_" .. stamp .. ".png")
-
-        softcut.position(SC_VOICE, SC_BUFFER_START)
-
-        softcut.play(SC_VOICE, 1)    -- Start playing (1 = on)
-        print("key() with n = 3: starting at position " .. SC_BUFFER_START)
-    end
 end
 
 -- Go into stop mode
@@ -579,9 +568,6 @@ function to_stop_mode()
         --  Cut the recording to the start
         record:cut()
         idx = nd_seq.last_index
-        for i = 1, idx do
-            print(i .. ", pos = " .. record:position(i))
-        end
 
         -- Clear the buffer that's not the audio, if there is any
 
@@ -608,18 +594,15 @@ function clear_non_recording()
 
         local duration = start_pos - SC_BUFFER_START
         softcut.buffer_clear_region(SC_BUFFER_START, duration, FADE_TIME, 0)
-        print("to_stop_mode(): Cleared from " .. SC_BUFFER_START .. " to " .. (SC_BUFFER_START+duration))
 
         local duration = SC_BUFFER_END - end_pos
         clear_buffer_end(end_pos, duration)
-        print("to_stop_mode(): Cleared from " .. end_pos .. " to " .. (end_pos+duration))
     else
         -- The audio does loop, so we need to clear from the
         -- end position to the start position
 
         local duration = start_pos - end_pos
         clear_buffer_end(end_pos, duration)
-        print("to_stop_mode(): Cleared from " .. end_pos .. " to " .. (end_pos+duration))
     end
 end
 
@@ -728,5 +711,4 @@ function start_playing_audio()
 
     softcut.position(SC_VOICE, audio_position)
     softcut.play(SC_VOICE, 1)    -- Start playing (1 = on)
-    print("start_playing_audio(): idx = " .. idx .. ", audio_position = " .. audio_position)
 end
