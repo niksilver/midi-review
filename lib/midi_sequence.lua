@@ -1,4 +1,4 @@
--- A sequence of note data.
+-- A sequence of MIDI note data.
 -- Each note data (MIDI notes) will have an index.
 --
 -- At each index we will have:

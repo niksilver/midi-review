@@ -1,4 +1,4 @@
-require('test_idx_ndata')
+require('test_midi_sequence')
 require('test_recording')
 require('test_rolling_window')
 

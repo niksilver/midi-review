@@ -5,9 +5,10 @@
 -- k2 = play/stop
 -- k2 long press = record
 -- e2 = scroll through time
+-- e3 = change rolling recording window
 
 Musicutil = require('musicutil')
-IdxNdata = include('lib/idx_ndata')
+MidiSeq = include('lib/midi_seq')
 Recording = include('lib/recording')
 Window = include('lib/rolling_window')
 
@@ -17,7 +18,7 @@ Window = include('lib/rolling_window')
 
 function init_note_data()
     note_vel = {}
-    nd_seq = IdxNdata.new(util.time)
+    nd_seq = MidiSeq.new(util.time)
     idx = nd_seq.first_index    -- This will be nil
 end
 init_note_data()
