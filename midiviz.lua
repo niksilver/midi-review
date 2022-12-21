@@ -8,7 +8,7 @@
 -- e3 = change rolling recording window
 
 Musicutil = require('musicutil')
-MidiSeq = include('lib/midi_seq')
+MidiSeq = include('lib/midi_sequence')
 Recording = include('lib/recording')
 Window = include('lib/rolling_window')
 
