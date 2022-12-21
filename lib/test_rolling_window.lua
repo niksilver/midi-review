@@ -62,3 +62,35 @@ function test_delta()
     window:delta(-1)
     lu.assertEquals(window:size(), 11)
 end
+
+function test_text()
+    local window = rw.new({
+        10,
+        20,
+        60,
+        62,
+        120,
+        130,
+        5 * 60,
+        5 * 60 + 22,
+        5 * 60 + 28,
+    })
+
+    lu.assertEquals(window:text(), "10 sec")
+    window:delta(1)
+    lu.assertEquals(window:text(), "20 sec")
+    window:delta(1)
+    lu.assertEquals(window:text(), "1 min")
+    window:delta(1)
+    lu.assertEquals(window:text(), "1 min 2 sec")
+    window:delta(1)
+    lu.assertEquals(window:text(), "2 min")
+    window:delta(1)
+    lu.assertEquals(window:text(), "about 2 min 10 sec")
+    window:delta(1)
+    lu.assertEquals(window:text(), "about 5 min")
+    window:delta(1)
+    lu.assertEquals(window:text(), "about 5 min 20 sec")
+    window:delta(1)
+    lu.assertEquals(window:text(), "about 5 min 30 sec")
+end
