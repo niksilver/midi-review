@@ -139,6 +139,9 @@ function init()
     softcut.event_phase(event_phase)
     softcut.poll_start_phase()
 
+    -- Set the popup to appear to show the user the window time
+
+    set_popup()
 end
 
 -- Respond when we get period information about the position of the
@@ -657,21 +660,27 @@ function enc(n, d)
 
         redraw()
     elseif n == 3 then
-        if state.popup_handle ~= nil then
-            clock.cancel(state.popup_handle)
-        end
-
         state.window:delta(d)
-        state.popup_message = state.window:text()
-        state.popup_appeared = util.time()
-        state.popup_handle = clock.run(function()
-            clock.sleep(POPUP_DURATION)
-            state.popup_handle = nil
-            redraw()
-        end)
-
+        set_popup()
         redraw()
     end
+end
+
+-- Set the popup to display
+--
+function set_popup()
+    if state.popup_handle ~= nil then
+        clock.cancel(state.popup_handle)
+    end
+
+    state.popup_message = state.window:text()
+    state.popup_appeared = util.time()
+    state.popup_handle = clock.run(function()
+        clock.sleep(POPUP_DURATION)
+        state.popup_handle = nil
+        redraw()
+    end)
+
 end
 
 -- Start recording audio
