@@ -24,13 +24,15 @@ end
 init_note_data()
 
 -- The recording voice (head) and buffer for softcut.
--- The start and end of the buffer.
+-- The start and end of the buffer; duration in seconds.
+-- The softcut buffer size is defined at
+-- https://github.com/monome/norns/blob/main/lua/core/softcut.lua#L23
 
 SC_VOICE = 1
 SC_BUFFER = 1
 SC_BUFFER_START = 1
-SC_BUFFER_DURATION = 60    -- Seconds
-SC_BUFFER_END = SC_BUFFER_START + SC_BUFFER_DURATION
+SC_BUFFER_END = softcut.BUFFER_SIZE
+SC_BUFFER_DURATION = SC_BUFFER_END - SC_BUFFER_START
 
 -- Voice position, when playing and recording
 
@@ -80,7 +82,7 @@ TRANSPORT_EVENT = 12
 state = {
     mode = STOP,
     k2_down = nil,
-    window = Window.new({5, 10, 20, 30}, 2),
+    window = Window.new({5, 10, 20, 30, 60}, 2),
     window_duration = nil,
     popup_message = nil,
     popup_appeared = 0,
