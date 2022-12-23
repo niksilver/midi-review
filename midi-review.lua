@@ -269,7 +269,7 @@ function redraw()
         screen.stroke()
 
         screen.level(15)
-        screen.move(start_x, AUDIO_PLAY_Y)
+        screen.move(start_x - 0.5, AUDIO_PLAY_Y)
         screen.line_rel(current_length, 0)
         screen.stroke()
     end
