@@ -2,10 +2,10 @@
 --
 -- Visualise & review MIDI notes.
 --
--- k2 = play/stop
--- k2 long press = record
--- e2 = scroll through time
--- e3 = change recording period
+-- K2 = play/stop
+-- K2 long press = record
+-- E2 = scroll through time
+-- E3 = change recording period
 
 Musicutil = require('musicutil')
 MidiSeq = include('lib/midi_sequence')
