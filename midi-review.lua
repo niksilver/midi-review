@@ -7,6 +7,11 @@
 -- E2 = scroll through time
 -- E3 = change recording period
 
+-- Credits:
+--   @tehn for creating norns and the amazing software development environment.
+--   @zebra for creating softcut, which manages all the audio.
+--   @markeats for creating musicutil, which translates MIDI to note names.
+
 Musicutil = require('musicutil')
 MidiSeq = include('lib/midi_sequence')
 Recording = include('lib/recording')

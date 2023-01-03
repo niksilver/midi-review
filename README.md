@@ -33,3 +33,11 @@ you next start recording.
 cd lib
 lua test_all.lua
 ```
+## Credits
+
+Thanks to:
+- @tehn for creating norns and the amazing software development environment.
+- @zebra for creating softcut, which manages all the audio.
+- @markeats for creating musicutil, which translates MIDI to note names.
+
+
