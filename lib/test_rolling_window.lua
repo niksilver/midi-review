@@ -105,5 +105,9 @@ function test_max_text_length()
         120,
     })
 
-    lu.assertEquals(window:max_text_length(), #"about 2 min 10 sec")
+    local charsfn = function(t) return #t end
+    local constfn = function(t) return 99 end
+
+    lu.assertEquals(window:max_text_length(charsfn), #"about 2 min 10 sec")
+    lu.assertEquals(window:max_text_length(constfn), 99)
 end

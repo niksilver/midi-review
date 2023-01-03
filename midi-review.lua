@@ -83,6 +83,7 @@ state = {
     mode = STOP,
     k2_down = nil,
     window = Window.new({5, 10, 20, 30, 60}, 2),
+    window_max_text_length = nil,
     window_duration = nil,
     popup_message = nil,
     popup_appeared = 0,
@@ -317,14 +318,14 @@ function redraw()
     end
 
     if state.popup_message then
-        local length = state.window:max_text_length() + 2
+        local length = window_max_text_length() + 16
 
         screen.level(0)
-        screen.rect(64 - 2.5 * length, 32 - 7, length*5, 10)
+        screen.rect(64 - length/2, 32 - 7, length, 10)
         screen.fill()
 
         screen.level(15)
-        screen.rect(64 - 2.5 * length, 32 - 7, length*5, 10)
+        screen.rect(64 - length/2, 32 - 7, length, 10)
         screen.stroke()
 
         screen.move(64, 32)
@@ -332,6 +333,19 @@ function redraw()
     end
 
     screen.update()
+end
+
+-- Get the maximum length of text in the duration popup.
+-- We have a method to calculate this in the rolling_window module,
+-- but we only need to calculate it once, so we'll do that and keep
+-- reusing that result.
+--
+function window_max_text_length()
+    if not state.window_max_text_length then
+        state.window_max_text_length = state.window:max_text_length(screen.text_extents)
+    end
+
+    return state.window_max_text_length
 end
 
 -- Draw a play button

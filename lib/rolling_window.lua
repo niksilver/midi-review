@@ -111,12 +111,14 @@ function some_non_empty_due(array, i)
 end
 
 -- Get the length of the longest text message from all the size options.
+-- @param f    A function that takes a string and returns its length.
+--     This is useful for testing this method off the norns hardware..
 --
-function C:max_text_length()
+function C:max_text_length(f)
     local max = 0
 
     for _, t in pairs(self.sizes) do
-        max = math.max(max, #period_to_text(t))
+        max = math.max( max, f(period_to_text(t)) )
     end
 
     return max
