@@ -27,6 +27,11 @@ the last 10 seconds will be retained. If you change the size of the
 rolling window then that change will only come into effect when
 you next start recording.
 
+## Requirements
+
+You will need a MIDI device connected to the norns. If you also connect
+audio then midi review will record the audio along with the MIDI notes.
+
 ## Running the tests
 
 ```
