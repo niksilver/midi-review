@@ -1,4 +1,6 @@
 -- midi review
+-- v1.0.0 @niksilver
+-- https://llllllll.co/t/60479
 --
 -- Visualise & review MIDI notes.
 --
