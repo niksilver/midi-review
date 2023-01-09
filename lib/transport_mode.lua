@@ -7,7 +7,10 @@ local C = {}
 
 function C.new()
     return FSM.create({
-        initial = "stop"
+        initial = "stop",
+        events = {
+            { name = "k1", from = "stop", to = "play" },
+        },
     })
 end
 
