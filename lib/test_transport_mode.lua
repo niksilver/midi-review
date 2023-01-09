@@ -14,12 +14,12 @@ function test_valid_events_from_stop()
     -- Stop -> k2 -> Play
     mode = Mode.new()
     mode.k2()
-    lu.assertEquals(mode.is('play'), true)
+    lu.assertEquals(mode.current, 'play')
 
     -- Stop -> k2 long press -> Record
     mode = Mode.new()
     mode.k2_long_press()
-    lu.assertEquals(mode.is('record'), true)
+    lu.assertEquals(mode.current, 'record')
 end
 
 function test_valid_events_from_play()
@@ -28,16 +28,16 @@ function test_valid_events_from_play()
     -- Play -> k2 -> Stop
     mode = Mode.new()
     mode.k2()
-    lu.assertEquals(mode.is('play'), true)
+    lu.assertEquals(mode.current, 'play')
     mode.k2()
-    lu.assertEquals(mode.is('stop'), true)
+    lu.assertEquals(mode.current, 'stop')
 
     -- Play -> k2 long press -> Record
     mode = Mode.new()
     mode.k2()
-    lu.assertEquals(mode.is('play'), true)
+    lu.assertEquals(mode.current, 'play')
     mode.k2_long_press()
-    lu.assertEquals(mode.is('record'), true)
+    lu.assertEquals(mode.current, 'record')
 end
 
 function test_valid_events_from_record()
@@ -46,16 +46,16 @@ function test_valid_events_from_record()
     -- Record -> k2 -> Stop
     mode = Mode.new()
     mode.k2_long_press()
-    lu.assertEquals(mode.is('record'), true)
+    lu.assertEquals(mode.current, 'record')
     mode.k2()
-    lu.assertEquals(mode.is('stop'), true)
+    lu.assertEquals(mode.current, 'stop')
 
     -- Record -> k2 long press -> Record
     mode = Mode.new()
     mode.k2_long_press()
-    lu.assertEquals(mode.is('record'), true)
+    lu.assertEquals(mode.current, 'record')
     mode.k2_long_press()
-    lu.assertEquals(mode.is('record'), true)
+    lu.assertEquals(mode.current, 'record')
 end
 
 function test_record_to_record_triggers_actions()
@@ -69,11 +69,11 @@ function test_record_to_record_triggers_actions()
 
     -- First get us into record mode
     mode.k2_long_press()
-    lu.assertEquals(mode.is('record'), true)
+    lu.assertEquals(mode.current, 'record')
     lu.assertEquals(count, 1)
 
     -- Now go into record mode again
     mode.k2_long_press()
-    lu.assertEquals(mode.is('record'), true)
+    lu.assertEquals(mode.current, 'record')
     lu.assertEquals(count, 2)
 end
