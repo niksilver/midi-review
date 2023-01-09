@@ -1,41 +1,41 @@
 lu = require('luaunit')
-State = require('transport_mode')
+Mode = require('transport_mode')
 
-function test_initial_state()
-    local state = State.new()
+function test_initial_mode()
+    local mode = Mode.new()
 
-    -- Initial state should be the stop state
-    lu.assertEquals(state.is('stop'), true)
+    -- Initial mode should be the stop mode
+    lu.assertEquals(mode.is('stop'), true)
 end
 
 function test_valid_events_from_stop()
-    local state
+    local mode
 
     -- Stop -> k2 -> Play
-    state = State.new()
-    state.k2()
-    lu.assertEquals(state.is('play'), true)
+    mode = Mode.new()
+    mode.k2()
+    lu.assertEquals(mode.is('play'), true)
 
     -- Stop -> k2 long press -> Record
-    state = State.new()
-    state.k2_long_press()
-    lu.assertEquals(state.is('record'), true)
+    mode = Mode.new()
+    mode.k2_long_press()
+    lu.assertEquals(mode.is('record'), true)
 end
 
 function test_valid_events_from_play()
-    local state
+    local mode
 
     -- Play -> k2 -> Stop
-    state = State.new()
-    state.k2()
-    lu.assertEquals(state.is('play'), true)
-    state.k2()
-    lu.assertEquals(state.is('stop'), true)
+    mode = Mode.new()
+    mode.k2()
+    lu.assertEquals(mode.is('play'), true)
+    mode.k2()
+    lu.assertEquals(mode.is('stop'), true)
 
     -- Play -> k2 long press -> Record
-    state = State.new()
-    state.k2()
-    lu.assertEquals(state.is('play'), true)
-    state.k2_long_press()
-    lu.assertEquals(state.is('record'), true)
+    mode = Mode.new()
+    mode.k2()
+    lu.assertEquals(mode.is('play'), true)
+    mode.k2_long_press()
+    lu.assertEquals(mode.is('record'), true)
 end
