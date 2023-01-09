@@ -9,8 +9,11 @@ function C.new()
     return FSM.create({
         initial = "stop",
         events = {
-            { name = "k2", from = "stop", to = "play" },
-            { name = "k2_long_press", from = "stop", to = "record" },
+            { from = "stop", name = "k2",            to = "play" },
+            { from = "stop", name = "k2_long_press", to = "record" },
+
+            { from = "play", name = "k2",            to = "stop" },
+            { from = "play", name = "k2_long_press", to = "record" },
         },
     })
 end
