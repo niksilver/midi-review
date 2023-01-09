@@ -14,6 +14,9 @@ function C.new()
 
             { from = "play", name = "k2",            to = "stop" },
             { from = "play", name = "k2_long_press", to = "record" },
+
+            { from = "record", name = "k2",            to = "stop" },
+            { from = "record", name = "k2_long_press", to = "record" },
         },
     })
 end

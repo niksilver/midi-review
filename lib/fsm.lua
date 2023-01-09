@@ -1,5 +1,6 @@
 --[[
--- This library is from https://github.com/unindented/lua-fsm
+-- This library is from https://github.com/niksilver/lua-fsm/tree/looping
+-- which is forked from https://github.com/unindented/lua-fsm
 
 Copyright (c) 2016 Daniel Perez Alvarez
 
@@ -34,6 +35,7 @@ M.SUCCEEDED     = 1
 M.NO_TRANSITION = 2
 M.PENDING       = 3
 M.CANCELLED     = 4
+M.NO_OP         = 5
 
 local function do_callback(handler, args)
   if handler then
@@ -89,7 +91,7 @@ local function build_transition(self, event, states)
       return M.CANCELLED
     end
 
-    if from == to then
+    if to == M.NO_OP then
       after_event(self, event, from, to, args)
       return M.NO_TRANSITION
     end
@@ -167,7 +169,7 @@ function M.create(cfg, target)
       table.insert(events_for_state[fr], event)
 
       -- Allow no-op transition if `to` is not specified.
-      states_for_event[event][fr] = to or fr
+      states_for_event[event][fr] = to or M.NO_OP
     end
   end
 
