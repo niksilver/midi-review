@@ -12,8 +12,13 @@ end
 function test_valid_events_from_stop()
     local state
 
-    -- Stop -> k1
+    -- Stop -> k2 -> Play
     state = State.new()
-    state.k1()
+    state.k2()
     lu.assertEquals(state.is('play'), true)
+
+    -- Stop -> k2 long press -> Record
+    state = State.new()
+    state.k2_long_press()
+    lu.assertEquals(state.is('record'), true)
 end
