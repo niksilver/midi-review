@@ -1,7 +1,7 @@
 -- A finite state machine specifically for the state of our transport.
 --
 
-local FSM = require('fsm')
+local FSM = include and include 'lib/fsm' or require 'fsm'
 
 local C = {}
 
@@ -14,6 +14,7 @@ function C.new()
             { from = "stop", name = "move_head" },
 
             { from = "play", name = "k2",            to = "stop" },
+            { from = "play", name = "end_of_notes",  to = "stop" },
             { from = "play", name = "k2_long_press", to = "record" },
             { from = "play", name = "move_head",     to = "play" },
 

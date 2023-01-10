@@ -80,21 +80,25 @@ end
 
 function test_move_head()
     local mode
+    local done_before_move_head
     local done_leave_stop
     local done_enter_stop
 
     -- From stop we move the head and stay stopped,
-    -- but we shouldn't call any actions
+    -- but we shouldn't call any stop-related actions
 
     mode = Mode.new()
+    mode.on_before_move_head = function() done_before_move_head = true end
     mode.on_leave_stop = function() done_leave_stop = true end
     mode.on_enter_stop = function() done_enter_stop = true end
     lu.assertEquals(mode.current, 'stop')
 
+    done_before_move_head = false
     done_leave_stop = false
     done_enter_stop = false
     mode.move_head()
     lu.assertEquals(mode.current, 'stop')
+    lu.assertTrue(done_before_move_head)
     lu.assertFalse(done_leave_stop)
     lu.assertFalse(done_enter_stop)
 
@@ -109,16 +113,40 @@ function test_move_head()
     -- From record
 
     mode = Mode.new()
+    mode.on_before_move_head = function() done_before_move_head = true end
     mode.on_leave_stop = function() done_leave_stop = true end
     mode.on_enter_stop = function() done_enter_stop = true end
 
     mode.k2_long_press()
     lu.assertEquals(mode.current, 'record')
 
+    done_before_move_head = false
     done_leave_stop = false
     done_enter_stop = false
     mode.move_head()
     lu.assertEquals(mode.current, 'stop')
+    lu.assertTrue(done_before_move_head)
     lu.assertFalse(done_leave_stop)
     lu.assertTrue(done_enter_stop)
+end
+
+function test_can_control_stop_to_play()
+    local okay_to_play
+
+    -- If we try to go from stop to play but it's not okay
+    -- to play then we shouldn't get to play, but should
+    -- be able to then record.
+
+    mode = Mode.new()
+    mode.on_leave_stop = function(self, event, from, to)
+        if to == 'play' and not okay_to_play then
+            self.cancel()
+        end
+    end
+
+    okay_to_play = false
+    mode.k2()
+    lu.assertEquals(mode.current, 'stop')
+    mode.k2_long_press()
+    lu.assertEquals(mode.current, 'record')
 end

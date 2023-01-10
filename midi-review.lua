@@ -18,6 +18,7 @@ Musicutil = require('musicutil')
 MidiSeq = include('lib/midi_sequence')
 Recording = include('lib/recording')
 Window = include('lib/rolling_window')
+TransportMode = include('lib/transport_mode')
 
 -- note_vel - Map from note value to velocity of all notes currently held
 -- mseq - Note data sequence of MIDI notes
@@ -76,9 +77,9 @@ FADE_TIME = 0.1
 -- the popup coroutine handle for its timeout;
 -- what the last MIDI event was.
 
-STOP = 0
-PLAY = 1
-RECORD = 2
+STOP = 'stop'
+PLAY = 'play'
+RECORD = 'record'
 
 POPUP_DURATION = 1.0
 
@@ -87,7 +88,7 @@ NOTE_EVENT = 11
 TRANSPORT_EVENT = 12
 
 state = {
-    mode = STOP,
+    mode = TransportMode.new(),
     k2_down = nil,
     window = Window.new({5, 10, 20, 30, 60}, 2),
     window_max_text_length = nil,
@@ -159,17 +160,17 @@ end
 --
 function event_phase(voice, pos)
 
-    if state.mode == STOP then
+    if state.mode.current == STOP then
         return
     end
 
-    if state.mode == RECORD then
+    if state.mode.current == RECORD then
         -- We're recording, so we may need to move the rolling recording window,
         -- as well as update the audio position.
 
         maintain_recording_window(pos)
 
-    elseif state.mode == PLAY then
+    elseif state.mode.current == PLAY then
         -- We're playing, so we may need to move our note number, or stop.
         -- But only check any of this we've not just started, otherwise
         -- lots of assumptions will be wrong.
@@ -180,7 +181,7 @@ function event_phase(voice, pos)
                     -- We need to stop playing
 
                     idx = mseq.last_index
-                    to_stop_mode()
+                    state.mode.end_of_notes()
                     redraw()
                     return
                 end
@@ -264,7 +265,7 @@ function redraw()
     -- If we're playing, draw our audio progress. It is a line drawn
     -- from the current note notch (idx).
 
-    if state.mode == PLAY and idx then
+    if state.mode.current == PLAY and idx then
         local start_x = timeline_x(idx)
         local current_length = 1
 
@@ -287,9 +288,9 @@ function redraw()
 
     -- Show the current mode
 
-    if state.mode == PLAY then
+    if state.mode.current == PLAY then
         draw_play_button()
-    elseif state.mode == RECORD then
+    elseif state.mode.current == RECORD then
         draw_record_button()
     else
         draw_stop_button()
@@ -485,7 +486,7 @@ midi_device.event = function(data)
     end
 
     if msg.type == "note_on" or msg.type == "note_off" then
-        if state.mode == RECORD then
+        if state.mode.current == RECORD then
             mseq:append(note_vel)
             idx = mseq.last_index
         end
@@ -519,7 +520,7 @@ function timeline_x(i)
     -- with the rolling recording window.
 
     local start_idx = 1
-    if state.mode == RECORD and mseq.first_index then
+    if state.mode.current == RECORD and mseq.first_index then
         start_idx = mseq.first_index
     end
 
@@ -548,64 +549,15 @@ function key(n, z)
             -- k2 has gone up...
 
             if state.k2_down and (time - state.k2_down) >= LONG_PRESS_SECS then
-                -- Go into record mode.
-                -- We don't start writing audio and MIDI data here;
-                -- we start when we get the first MIDI note.
-
-                init_note_data()
-                stop_recording_audio()
-                stop_playing_audio()
-
-                state.last_event = NO_EVENT
-                state.window_duration = state.window:size()
-                state.mode = RECORD
-
-            elseif state.mode == STOP then
-                -- Short press - go into play mode if we can
-
-                if mseq.first_index then
-                    stop_recording_audio()
-
-                    state.mode = PLAY
-                    start_playing_audio()
-                end
+                state.mode.k2_long_press()
             else
-                -- Short press - go into stop mode
-
-                to_stop_mode()
+                state.mode.k2()
             end
 
             state.k2_down = nil
             redraw()
         end
     end
-end
-
--- Go into stop mode
---
-function to_stop_mode()
-    -- If we were recording, and we got some MIDI data,
-    -- record final empty MIDI note data, stop audio recording, and cut it.
-
-    if state.mode == RECORD and idx then
-        note_vel = {}
-        mseq:append(note_vel)
-        stop_recording_audio()
-
-        --  Cut the recording to the start
-        record:cut()
-        idx = mseq.last_index
-
-        -- Clear the buffer that's not the audio, if there is any
-
-        if mseq.last_index >= 2 then
-            clear_non_recording()
-        end
-    end
-
-    stop_playing_audio()
-
-    state.mode = STOP
 end
 
 -- Clear the buffer that's outside of our recording, as it may
@@ -659,26 +611,7 @@ end
 --
 function enc(n, d)
     if n == 2 then
-        if mseq:length() > 0 then
-            idx = util.clamp(idx + d, mseq.first_index, mseq.last_index)
-            state.last_event = TRANSPORT_EVENT
-        end
-
-
-        if state.mode == RECORD then
-            -- Stop recording
-
-            to_stop_mode()
-
-        elseif state.mode == PLAY then
-            -- Restart playback from the new point
-
-            stop_playing_audio()
-
-            state.mode = PLAY
-            start_playing_audio()
-        end
-
+        state.mode.move_head(d)
         redraw()
     elseif n == 3 then
         state.window:delta(d)
@@ -744,4 +677,56 @@ function start_playing_audio()
 
     softcut.position(SC_VOICE, audio_position)
     softcut.play(SC_VOICE, 1)    -- Start playing (1 = on)
+end
+
+-- All the transport events from key presses and encoder turns,
+-- using the callbacks in the finite state model.
+
+state.mode.on_enter_record = function()
+    -- We don't start writing audio and MIDI data here;
+    -- we start when we get the first MIDI note.
+
+    init_note_data()
+    state.last_event = NO_EVENT
+    state.window_duration = state.window:size()
+end
+
+state.mode.on_leave_record = function(self, event, from, to)
+    stop_recording_audio()
+
+    -- If we were recording, and we got some MIDI data,
+    -- record final empty MIDI note data, stop audio recording, and cut it.
+
+    note_vel = {}
+    mseq:append(note_vel)
+
+    --  Cut the recording to the start
+    record:cut()
+    idx = mseq.last_index
+
+    -- Clear the buffer that's not the audio, if there is any
+
+    if mseq.last_index >= 2 then
+        clear_non_recording()
+    end
+end
+
+state.mode.on_leave_play = stop_playing_audio
+
+state.mode.on_enter_play = start_playing_audio
+
+state.mode.on_leave_stop = function(self, event, from, to)
+    -- We may be leaving stop mode to play mode, but prevent
+    -- this if there's no data
+
+    if to == PLAY and mseq.first_index == nil then
+        self.cancel()
+    end
+end
+
+state.mode.on_before_move_head = function(self, event, from, to, d)
+    if mseq:length() > 0 then
+        idx = util.clamp(idx + d, mseq.first_index, mseq.last_index)
+        state.last_event = TRANSPORT_EVENT
+    end
 end
