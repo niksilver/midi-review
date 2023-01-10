@@ -77,3 +77,48 @@ function test_record_to_record_triggers_actions()
     lu.assertEquals(mode.current, 'record')
     lu.assertEquals(count, 2)
 end
+
+function test_move_head()
+    local mode
+    local done_leave_stop
+    local done_enter_stop
+
+    -- From stop we move the head and stay stopped,
+    -- but we shouldn't call any actions
+
+    mode = Mode.new()
+    mode.on_leave_stop = function() done_leave_stop = true end
+    mode.on_enter_stop = function() done_enter_stop = true end
+    lu.assertEquals(mode.current, 'stop')
+
+    done_leave_stop = false
+    done_enter_stop = false
+    mode.move_head()
+    lu.assertEquals(mode.current, 'stop')
+    lu.assertFalse(done_leave_stop)
+    lu.assertFalse(done_enter_stop)
+
+    -- From play
+
+    mode = Mode.new()
+    mode.k2()
+    lu.assertEquals(mode.current, 'play')
+    mode.move_head()
+    lu.assertEquals(mode.current, 'play')
+
+    -- From record
+
+    mode = Mode.new()
+    mode.on_leave_stop = function() done_leave_stop = true end
+    mode.on_enter_stop = function() done_enter_stop = true end
+
+    mode.k2_long_press()
+    lu.assertEquals(mode.current, 'record')
+
+    done_leave_stop = false
+    done_enter_stop = false
+    mode.move_head()
+    lu.assertEquals(mode.current, 'stop')
+    lu.assertFalse(done_leave_stop)
+    lu.assertTrue(done_enter_stop)
+end
