@@ -1,5 +1,5 @@
 -- midi review
--- v1.0.0 @niksilver
+-- v1.0.1 @niksilver
 -- https://llllllll.co/t/60479
 --
 -- Visualise & review MIDI notes.
@@ -19,6 +19,10 @@ MidiSeq = include('lib/midi_sequence')
 Recording = include('lib/recording')
 Window = include('lib/rolling_window')
 TransportMode = include('lib/transport_mode')
+
+----------------------------------------------------------------------
+-- Initialisation
+----------------------------------------------------------------------
 
 -- note_vel - Map from note value to velocity of all notes currently held
 -- mseq - Note data sequence of MIDI notes
@@ -70,6 +74,7 @@ SC_UPDATE_FREQ = 1/20
 FADE_TIME = 0.1
 
 -- Current key/screen state, including
+-- transport mode, managed by a finite state machine;
 -- when k2 was pressed down (for long press);
 -- rolling window length;
 -- what the popup message is;
@@ -152,6 +157,10 @@ function init()
 
     set_popup()
 end
+
+----------------------------------------------------------------------
+-- Audio and MIDI
+----------------------------------------------------------------------
 
 -- Respond when we get period information about the position of the
 -- play/record head. This is a callback for `softcut.event_phase`.
@@ -236,6 +245,102 @@ function just_starting(pos)
 
     return pos <= start_pos and math.abs(pos - start_pos) <= SC_UPDATE_FREQ
 end
+
+-- Capture current MIDI data
+--
+midi_device.event = function(data)
+    local msg = midi.to_msg(data)
+
+    if msg.type == "note_on" then
+        -- If it's note on, add to the current 'on' notes
+        note_vel[msg.note] = msg.vel
+    elseif msg.type == "note_off" then
+        -- If it's note off, remove from the current 'on' notes
+        note_vel[msg.note] = nil
+    end
+
+    if msg.type == "note_on" or msg.type == "note_off" then
+        if state.mode.current == RECORD then
+            mseq:append(note_vel)
+            idx = mseq.last_index
+        end
+        state.last_event = NOTE_EVENT
+
+        -- Maybe this is the trigger to start recording audio
+        if mseq.last_index == 1 then
+            start_recording_audio()
+        end
+
+    end
+    redraw()
+end
+
+-- Clear the buffer that's outside of our recording, as it may
+-- contain audio of the last time round the loop.
+--
+function clear_non_recording()
+    local start_pos = record:start_position()
+    local end_pos = record:end_position()
+
+    if start_pos < end_pos then
+        -- The audio doesn't loop, so we need to clear
+        -- before the start position and after the end position
+
+        local duration = start_pos - SC_BUFFER_START
+        softcut.buffer_clear_region(SC_BUFFER_START, duration, FADE_TIME, 0)
+
+        local duration = SC_BUFFER_END - end_pos
+        clear_buffer_end(end_pos, duration)
+    else
+        -- The audio does loop, so we need to clear from the
+        -- end position to the start position
+
+        local duration = start_pos - end_pos
+        clear_buffer_end(end_pos, duration)
+    end
+end
+
+-- Fade the end of the recording.
+-- We need to avoid an audio glitch where we get a sharp cutoff or the start
+-- of earlier audio. We do this by copying in "silence" from the other
+-- buffer, with crossfade starting just before the end of our recording.
+-- @param end_pos    The end position of our audio.
+-- @param duration   Duration of the buffer to clear.
+--
+function clear_buffer_end(end_pos, duration)
+    local other_buffer = 3 - SC_VOICE
+
+    softcut.buffer_copy_mono(
+        other_buffer, SC_VOICE,  -- Source buffer, destination buffer
+        1.0,                     -- Start in source
+        end_pos - FADE_TIME,     -- Start in destination
+        duration,
+        FADE_TIME,
+        0,   -- Preserve
+        0)   -- Don't reverse
+end
+
+-- Start recording audio
+--
+function start_recording_audio()
+    softcut.buffer_clear()    -- Clear all the buffers
+    softcut.position(SC_VOICE, SC_BUFFER_START)    -- Play position at the start
+
+    init_recording()
+    audio_position = SC_BUFFER_START
+
+    softcut.rec(SC_VOICE, 1)    -- Start recording (1 = on)
+end
+
+-- Stop recording audio
+--
+function stop_recording_audio()
+    softcut.rec(SC_VOICE, 0)    -- Stop recording (0 = off)
+end
+
+----------------------------------------------------------------------
+-- Drawing
+----------------------------------------------------------------------
 
 -- (Re)draw the screen
 --
@@ -472,35 +577,6 @@ function display_note_names(notes)
     end
 end
 
--- Capture current MIDI data
---
-midi_device.event = function(data)
-    local msg = midi.to_msg(data)
-
-    if msg.type == "note_on" then
-        -- If it's note on, add to the current 'on' notes
-        note_vel[msg.note] = msg.vel
-    elseif msg.type == "note_off" then
-        -- If it's note off, remove from the current 'on' notes
-        note_vel[msg.note] = nil
-    end
-
-    if msg.type == "note_on" or msg.type == "note_off" then
-        if state.mode.current == RECORD then
-            mseq:append(note_vel)
-            idx = mseq.last_index
-        end
-        state.last_event = NOTE_EVENT
-
-        -- Maybe this is the trigger to start recording audio
-        if mseq.last_index == 1 then
-            start_recording_audio()
-        end
-
-    end
-    redraw()
-end
-
 -- Draw a notch on the timeline
 -- @param i    Which notch idx
 -- @param level    Screen brightness
@@ -537,6 +613,10 @@ function timeline_x(i)
     return x
 end
 
+----------------------------------------------------------------------
+-- Buttons
+----------------------------------------------------------------------
+
 -- Handle key presses
 --
 function key(n, z)
@@ -558,51 +638,6 @@ function key(n, z)
             redraw()
         end
     end
-end
-
--- Clear the buffer that's outside of our recording, as it may
--- contain audio of the last time round the loop.
---
-function clear_non_recording()
-    local start_pos = record:start_position()
-    local end_pos = record:end_position()
-
-    if start_pos < end_pos then
-        -- The audio doesn't loop, so we need to clear
-        -- before the start position and after the end position
-
-        local duration = start_pos - SC_BUFFER_START
-        softcut.buffer_clear_region(SC_BUFFER_START, duration, FADE_TIME, 0)
-
-        local duration = SC_BUFFER_END - end_pos
-        clear_buffer_end(end_pos, duration)
-    else
-        -- The audio does loop, so we need to clear from the
-        -- end position to the start position
-
-        local duration = start_pos - end_pos
-        clear_buffer_end(end_pos, duration)
-    end
-end
-
--- Fade the end of the recording.
--- We need to avoid an audio glitch where we get a sharp cutoff or the start
--- of earlier audio. We do this by copying in "silence" from the other
--- buffer, with crossfade starting just before the end of our recording.
--- @param end_pos    The end position of our audio.
--- @param duration   Duration of the buffer to clear.
---
-function clear_buffer_end(end_pos, duration)
-    local other_buffer = 3 - SC_VOICE
-
-    softcut.buffer_copy_mono(
-        other_buffer, SC_VOICE,  -- Source buffer, destination buffer
-        1.0,                     -- Start in source
-        end_pos - FADE_TIME,     -- Start in destination
-        duration,
-        FADE_TIME,
-        0,   -- Preserve
-        0)   -- Don't reverse
 end
 
 -- Encoders:
@@ -637,37 +672,56 @@ function set_popup()
 
 end
 
--- Start recording audio
+---------------------------------------------------------------------
 --
-function start_recording_audio()
-    softcut.buffer_clear()    -- Clear all the buffers
-    softcut.position(SC_VOICE, SC_BUFFER_START)    -- Play position at the start
+-- All the transport events from key presses and encoder turns,
+-- using the callbacks in the finite state model.
+--
+---------------------------------------------------------------------
 
-    init_recording()
-    audio_position = SC_BUFFER_START
-
-    softcut.rec(SC_VOICE, 1)    -- Start recording (1 = on)
+-- Actions when we start recording.
+-- We don't start writing audio and MIDI data here;
+-- we start when we get the first MIDI note.
+--
+state.mode.on_enter_record = function()
+    init_note_data()
+    state.last_event = NO_EVENT
+    state.window_duration = state.window:size()
 end
 
--- Stop recording audio
+-- Actions when we stop recording.
+-- If got some MIDI data, record final empty MIDI note data, and cut the audio.
 --
-function stop_recording_audio()
-    softcut.rec(SC_VOICE, 0)    -- Stop recording (0 = off)
+state.mode.on_leave_record = function(self, event, from, to)
+    stop_recording_audio()
+
+    if idx then
+        note_vel = {}
+        mseq:append(note_vel)
+
+        --  Cut the recording to the start
+        record:cut()
+        idx = mseq.last_index
+
+        -- Clear the buffer that's not the audio
+        clear_non_recording()
+    end
 end
 
 -- Stop playing audio
 --
-function stop_playing_audio()
+state.mode.on_leave_play = function()
     softcut.play(SC_VOICE, 0)    -- Stop playing (0 = off)
     audio_position = nil
     play_start_idx = nil
 end
 
--- Start playing audio from the point of where we are in the MIDI sequence.
+-- Actions when we start playing audio.
+-- Start from the point of where we are in the MIDI sequence.
 -- We'll also track our audio play position and update the note index
 -- on the timeline.
 --
-function start_playing_audio()
+state.mode.on_enter_play = function()
     audio_position = SC_BUFFER_START
     if idx then
         audio_position = record:position(idx)
@@ -678,42 +732,6 @@ function start_playing_audio()
     softcut.position(SC_VOICE, audio_position)
     softcut.play(SC_VOICE, 1)    -- Start playing (1 = on)
 end
-
--- All the transport events from key presses and encoder turns,
--- using the callbacks in the finite state model.
-
-state.mode.on_enter_record = function()
-    -- We don't start writing audio and MIDI data here;
-    -- we start when we get the first MIDI note.
-
-    init_note_data()
-    state.last_event = NO_EVENT
-    state.window_duration = state.window:size()
-end
-
-state.mode.on_leave_record = function(self, event, from, to)
-    stop_recording_audio()
-
-    -- If we were recording, and we got some MIDI data,
-    -- record final empty MIDI note data, stop audio recording, and cut it.
-
-    note_vel = {}
-    mseq:append(note_vel)
-
-    --  Cut the recording to the start
-    record:cut()
-    idx = mseq.last_index
-
-    -- Clear the buffer that's not the audio, if there is any
-
-    if mseq.last_index >= 2 then
-        clear_non_recording()
-    end
-end
-
-state.mode.on_leave_play = stop_playing_audio
-
-state.mode.on_enter_play = start_playing_audio
 
 state.mode.on_leave_stop = function(self, event, from, to)
     -- We may be leaving stop mode to play mode, but prevent
