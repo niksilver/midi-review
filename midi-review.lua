@@ -1,5 +1,5 @@
 -- midi review
--- v1.0.1 @niksilver
+-- v1.1.0 @niksilver
 -- https://llllllll.co/t/60479
 --
 -- Visualise & review MIDI notes.
@@ -107,6 +107,7 @@ state.window_duration = state.window:size()
 
 -- Have the record window an editable parameter
 
+params:add_separator("midi_review", "midi review")
 params:add_option("record_window",
     "record window",
     state.window:text_list(),
