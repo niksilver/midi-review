@@ -15,13 +15,6 @@ function C.new(sizes, default)
     setmetatable(obj, {__index = C})
 
     obj.sizes = sizes
-    obj.text_to_idx = {}
-    obj.texts = {}
-    for i, size in pairs(sizes) do
-        obj.texts[i] = period_to_text(size)
-        obj.text_to_idx[obj.texts[i]] = i
-    end
-
     obj.current_index = default or 1
 
     return obj
@@ -54,7 +47,7 @@ end
 -- A text string to describe the size of our current window.
 --
 function C:text()
-    return self.texts[self.current_index]
+    return period_to_text(self:size())
 end
 
 -- Describe a number of seconds as text
@@ -117,6 +110,18 @@ function some_non_empty_due(array, i)
     return false
 end
 
+-- Get all the period as a text list.
+--
+function C:text_list()
+    local out = {}
+
+    for i, size in pairs(self.sizes) do
+        out[i] = period_to_text(size)
+    end
+
+    return out
+end
+
 -- Get the length of the longest text message from all the size options.
 -- @param f    A function that takes a string and returns its length.
 --     This is useful for testing this method off the norns hardware..
@@ -124,26 +129,11 @@ end
 function C:max_text_length(f)
     local max = 0
 
-    for _, text in pairs(self.texts) do
-        max = math.max( max, f(text) )
+    for _, t in pairs(self.sizes) do
+        max = math.max( max, f(period_to_text(t)) )
     end
 
     return max
-end
-
--- Get a list of all the text periods.
---
-function C:text_list()
-    return self.texts
-end
-
--- Set the window size by a text description.
--- @param t    Text of the window size. Must be from the initial list, otherwise
---     there will be no change.
--- @return    New size of the window.
-function C:set_by_text(t)
-    self.current_index = self.text_to_idx[t] or self.current_index
-    return self:size()
 end
 
 -- Index of the current windows size.

@@ -95,6 +95,16 @@ function test_text()
     lu.assertEquals(window:text(), "about 5 min 30 sec")
 end
 
+function test_text_list()
+    local window = rw.new({
+        20,
+        60,
+        130,
+    })
+
+    lu.assertEquals(window:text_list(), {"20 sec", "1 min", "about 2 min 10 sec"})
+end
+
 function test_max_text_length()
     local window = rw.new({
         10,
@@ -110,34 +120,4 @@ function test_max_text_length()
 
     lu.assertEquals(window:max_text_length(charsfn), #"about 2 min 10 sec")
     lu.assertEquals(window:max_text_length(constfn), 99)
-end
-
-function test_text_list()
-    local window = rw.new({
-        20,
-        60,
-        130,
-    })
-
-    lu.assertEquals(window:text_list(), {"20 sec", "1 min", "about 2 min 10 sec"})
-end
-
-function test_set_by_text()
-    local window = rw.new({
-        20,
-        60,
-        130,
-    })
-
-    lu.assertEquals(window:set_by_text("20 sec"), 20)
-    lu.assertEquals(window:size(), 20)
-
-    lu.assertEquals(window:set_by_text("1 min"), 60)
-    lu.assertEquals(window:size(), 60)
-
-    lu.assertEquals(window:set_by_text("about 2 min 10 sec"), 130)
-    lu.assertEquals(window:size(), 130)
-
-    lu.assertEquals(window:set_by_text("rubbish!"), 130)
-    lu.assertEquals(window:size(), 130)
 end
