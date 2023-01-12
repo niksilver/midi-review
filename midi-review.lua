@@ -105,7 +105,20 @@ state = {
 }
 state.window_duration = state.window:size()
 
-LONG_PRESS_SECS = 0.5  -- Length of a long press, in seconds
+-- Have the record window an editable parameter
+
+params:add_option("record_window",
+    "record window",
+    state.window:text_list(),
+    state.window.current_index
+)
+params:set_action("record_window",
+    function(i) state.window.current_index = i end
+)
+
+-- Length of a long press, in seconds
+
+LONG_PRESS_SECS = 0.5
 
 -- Our MIDI device
 
@@ -650,6 +663,7 @@ function enc(n, d)
         redraw()
     elseif n == 3 then
         state.window:delta(d)
+        params:set("record_window", state.window.current_index, true)
         set_popup()
         redraw()
     end
