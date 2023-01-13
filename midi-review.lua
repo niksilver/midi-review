@@ -105,7 +105,8 @@ state = {
 }
 state.window_duration = state.window:size()
 
--- Have the record window an editable parameter
+-- Have the record window an editable parameter.
+-- We can save it in slot 1, and it will load when the script starts.
 
 params:add_separator("midi_review", "midi review")
 params:add_option("record_window",
@@ -116,6 +117,11 @@ params:add_option("record_window",
 params:set_action("record_window",
     function(i) state.window.current_index = i end
 )
+params:add_trigger("save", "save as default")
+params:set_action("save", function()
+    params:write(1, "default")
+end)
+params:read(1)
 
 -- Length of a long press, in seconds
 

@@ -21,11 +21,15 @@ you've recorded. Non-note MIDI data is not captured or visualised.
 - E2 = scroll through time
 - E3 = change size of recording window
 
-When you start recording notes and audio are recorded into a rolling
+When you start recording, notes and audio are recorded into a rolling
 window. For example, if the rolling window is 10 seconds then (only)
 the last 10 seconds will be retained. If you change the size of the
 rolling window then that change will only come into effect when
 you next start recording.
+
+You can also change the size of the rolling record window in
+`PARAMETERS > EDIT`, which also offers a save option. If you do save it
+there then this will be its value the next time you load the script.
 
 ## Requirements
 
